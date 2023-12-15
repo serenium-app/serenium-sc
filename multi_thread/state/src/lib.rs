@@ -13,8 +13,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 pub mod metafns {
     pub type State = <ContractMetadata as Metadata>::State ;
 
-
-    pub fn get_state(state: State) -> IoThread  {
+    pub fn get_state(state: State) -> IoThreads  {
         state
     }
 

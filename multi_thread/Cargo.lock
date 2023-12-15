@@ -2384,6 +2384,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "multi_thread"
+version = "0.1.0"
+dependencies = [
+ "gclient",
+ "gear-wasm-builder",
+ "gmeta",
+ "gstd",
+ "gtest",
+ "hashbrown 0.14.2",
+ "io",
+ "parity-scale-codec",
+ "scale-info",
+ "state",
+ "tokio",
+]
+
+[[package]]
 name = "nodrop"
 version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4144,23 +4161,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.39",
-]
-
-[[package]]
-name = "thread"
-version = "0.1.0"
-dependencies = [
- "gclient",
- "gear-wasm-builder",
- "gmeta",
- "gstd",
- "gtest",
- "hashbrown 0.14.2",
- "io",
- "parity-scale-codec",
- "scale-info",
- "state",
- "tokio",
 ]
 
 [[package]]

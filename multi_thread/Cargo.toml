@@ -1,5 +1,5 @@
 [package]
-name = "thread"
+name = "multi_thread"
 version = "0.1.0"
 edition = "2021"
 

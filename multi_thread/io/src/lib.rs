@@ -1,5 +1,7 @@
 #![no_std]
-use gstd::{ prelude::*, ActorId};
+
+use core::ops::Add;
+use gstd::{prelude::*, ActorId};
 use gmeta::{In, InOut, Metadata};
 
 extern crate alloc;
@@ -11,6 +13,27 @@ pub struct InitThread {
     pub title: String,
     pub content: String,
     pub photo_url: String
+}
+
+#[derive(Encode, Decode, TypeInfo)]
+pub struct EndThreadPayload {
+    pub thread_id: String
+}
+
+#[derive(Encode, Decode, TypeInfo)]
+pub struct AddReplyPayload {
+    pub thread_id: String,
+    pub title: String,
+    pub content:  String,
+    pub reply_id: String,
+    pub referral_reply_id: String
+}
+
+#[derive(Encode, Decode, TypeInfo)]
+pub struct LikeReplyPayload {
+    pub thread_id: String,
+    pub amount: String,
+    pub reply_id: String
 }
 
 #[derive(Encode, Decode, TypeInfo, PartialEq, Eq, Clone, Debug)]
@@ -57,9 +80,9 @@ pub enum ThreadState {
 #[derive(Encode, Decode, TypeInfo)]
 pub enum ThreadAction {
     NewThread(InitThread),
-    EndThread,
-    AddReply(String, String, String, String),
-    LikeReply(u128, String)
+    EndThread(EndThreadPayload),
+    AddReply(AddReplyPayload),
+    LikeReply(LikeReplyPayload)
 }
 
 #[derive(Encode, Decode, TypeInfo, PartialEq, Eq, Clone, Debug)]
@@ -105,6 +128,11 @@ pub struct InitFT {
 }
 
 #[derive(Default, Clone, Encode, Decode, TypeInfo)]
+pub struct IoThreads {
+    pub threads: Vec<(String, IoThread)>
+}
+
+#[derive(Default, Clone, Encode, Decode, TypeInfo)]
 pub struct IoThread {
     pub id: String,
     pub owner: ActorId,
@@ -127,5 +155,5 @@ impl Metadata for ContractMetadata {
     type Reply = ();
     type Others = ();
     type Signal = ();
-    type State = IoThread;
+    type State = IoThreads;
 }
