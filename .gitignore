@@ -1,0 +1,21 @@
+# Ignore compiled binaries
+*.bin
+*.exe
+*.o
+*.out
+*.binpath
+
+# Ignore JetBrains IDE specific files
+*.iml
+.idea/
+
+# Ignore Rust target directory
+target/
+
+# Ignore meta-related files
+.metahash
+*.meta.txt
+meta.txt
+
+# Ignore macOS specific files
+.DS_Store
