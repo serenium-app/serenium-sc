@@ -2,6 +2,7 @@
 extern crate alloc;
 
 use hashbrown::HashMap;
+use hashbrown::HashSet;
 use io::*;
 use gstd::{async_main, exec, msg, prelude::*, ActorId,};
 
@@ -114,7 +115,7 @@ impl Thread {
         }
     }
 
-    fn find_winner_post_id(&mut self) -> Option<&String> {
+    fn find_winner_post_id(&self) -> Option<&String> {
         if let Some(thread) = thread_state_mut().storage.get_mut(&self.id) {
             let mut max_likes = 0;
             let mut post_id_winner: Option<&String> = None;
@@ -131,30 +132,44 @@ impl Thread {
         }
     }
 
-    fn find_path_to_winner(&mut self, original_post_id: &String) -> Vec<ActorId> {
+    fn find_path_to_winner(&self, original_post_id: &String) -> Vec<ActorId> {
         let mut path_winners: Vec<ActorId> = Vec::new();
-        path_winners.push(self.owner);
+        path_winners.push(self.owner.clone());
 
         let winner_id = match self.find_winner_post_id() {
             Some(id) => id,
-            None => return path_winners, // Or handle this scenario as needed
+            None => return path_winners,
         };
 
-        let mut target_id = winner_id.clone();
-        let adjacency_lists: Vec<_> = self.graph_rep.values().cloned().collect();
+        let mut target_id = winner_id;
 
-        while target_id != *original_post_id {
-            for adj_list in &adjacency_lists {
-                if let Some(actor_id) = adj_list.iter()
-                    .find(|&reply_id| reply_id == &target_id)
-                    .and_then(|reply_id| self.replies.get(reply_id).map(|reply| reply.owner.clone()))
+        // Convert adjacency lists into a HashMap for efficient lookups
+        let adjacency_map: HashMap<&String, &Vec<String>> = self.graph_rep.iter().collect();
+
+        // Use a HashSet to keep track of visited nodes to avoid cycles
+        let mut visited: HashSet<String> = HashSet::new();
+
+        while *target_id != *original_post_id {
+            if let Some(adj_list) = adjacency_map.get(&target_id) {
+                if let Some(reply_id) = adj_list.iter()
+                    .find(|&reply_id| !visited.contains(reply_id))
                 {
-                    path_winners.push(actor_id);
-                    target_id = target_id.clone();
-                    break;
+                    visited.insert(reply_id.clone());
+                    if let Some(reply) = self.replies.get(reply_id) {
+                        let actor_id = reply.owner.clone();
+                        path_winners.push(actor_id.clone());
+                        target_id = &reply_id; // Set target_id to the reply_id for the next iteration
+                    } else {
+                        break; // Unable to retrieve reply or actor_id associated with it
+                    }
+                } else {
+                    break; // No further nodes to explore
                 }
+            } else {
+                break; // Invalid target_id or no adjacency list found
             }
         }
+
 
         path_winners
     }
@@ -226,24 +241,29 @@ async fn main() {
         ThreadAction::EndThread(thread_id) => {
             if let Some(thread) = thread_state_mut().storage.get_mut(&thread_id) {
                 thread.thread_status = ThreadStatus::Expired;
-                let &winner = thread.find_winner_actor_id().expect("Winner not found");
 
-                let distributed_tokens = thread.distributed_tokens;
+                if let Some(winner) = thread.find_winner_actor_id() {
+                    // let tokens_for_abs_winner = thread.distributed_tokens.clone() * 4 / 10;
 
-                // calculate amount of tokens to distribute
-                let tokens_for_abs_winner = distributed_tokens.clone() * 4 / 10;
+                    let address_ft = addresft_state_mut();
+                    let payload = FTAction::Transfer{from: exec::program_id(), to: *winner, amount: thread.distributed_tokens.clone() * 4 / 10};
+                    let _ = msg::send(address_ft.ft_program_id, payload, 0);
 
-                thread.tokens_transfer_reward(tokens_for_abs_winner, winner).await;
+                    let path_winners = thread.find_path_to_winner(&thread.id);
+                    if !path_winners.is_empty() {
+                        let tokens_for_each_path_winner = thread.distributed_tokens.clone() * 4 / 10 / path_winners.len() as u128;
 
-                let path_winners = thread.find_path_to_winner(&thread.id.clone());
-                if !path_winners.is_empty() {
-                    let tokens_for_each_path_winner = (distributed_tokens.clone() * 4 / 10) / path_winners.len() as u128;
-                    for actor in path_winners {
-                        thread.tokens_transfer_reward(tokens_for_each_path_winner, actor).await;
+                        for actor in path_winners {
+                            thread.tokens_transfer_reward(tokens_for_each_path_winner, actor).await;
+                        }
                     }
+                } else {
+                    // Handle case when winner is not found
+                    return; // Exiting early if there's no winner
                 }
-            };
+            }
         }
+
 
         ThreadAction::AddReply(payload) => {
             if let Some(thread) = thread_state_mut().storage.get_mut(&payload.thread_id) {
@@ -274,6 +294,7 @@ async fn main() {
                 if let Some(reply) = thread.replies.get_mut(&payload.reply_id) {
                     reply.likes += parsed_amount;
                 };
+                thread.tokens_transfer_pay(1).await;
             };
         }
     };
