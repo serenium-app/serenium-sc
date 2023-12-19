@@ -16,11 +16,6 @@ pub struct InitThread {
 }
 
 #[derive(Encode, Decode, TypeInfo)]
-pub struct EndThreadPayload {
-    pub thread_id: String
-}
-
-#[derive(Encode, Decode, TypeInfo)]
 pub struct AddReplyPayload {
     pub thread_id: String,
     pub title: String,
@@ -56,7 +51,7 @@ pub struct Thread {
     pub photo_url: String,
     pub replies: Vec<(String, ThreadReply)>,
     pub participants:Vec<(ActorId, u128)>,
-    pub thread_status: ThreadState,
+    pub thread_status: ThreadStatus,
     pub distributed_tokens: u128,
     pub graph_rep: Vec<(String, Vec<String>)>
 }
@@ -71,7 +66,7 @@ pub enum ThreadType {
 
 #[derive( Encode, Decode, Clone, TypeInfo)]
 #[derive(Default)]
-pub enum ThreadState {
+pub enum ThreadStatus {
     #[default]
     Active,
     Expired
@@ -80,7 +75,7 @@ pub enum ThreadState {
 #[derive(Encode, Decode, TypeInfo)]
 pub enum ThreadAction {
     NewThread(InitThread),
-    EndThread(EndThreadPayload),
+    EndThread(String),
     AddReply(AddReplyPayload),
     LikeReply(LikeReplyPayload)
 }
@@ -142,7 +137,7 @@ pub struct IoThread {
     pub photo_url: String,
     pub replies: Vec<(String, ThreadReply)>,
     pub participants:Vec<(ActorId, u128)>,
-    pub thread_status: ThreadState,
+    pub thread_status: ThreadStatus,
     pub distributed_tokens: u128,
     pub graph_rep: Vec<(String, Vec<String>)>
 }
