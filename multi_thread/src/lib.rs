@@ -90,9 +90,9 @@ impl Thread {
     }
 
     async fn tokens_transfer_pay(&mut self, amount_tokens: u128) {
-        self.mint_thread_contract(1).await;
+        self.mint_thread_contract(amount_tokens).await;
         self.transfer_tokens(amount_tokens).await;
-        self.burn_thread_contract(1).await;
+        self.burn_thread_contract(amount_tokens).await;
 
         self.participants.entry(msg::source()).or_insert(amount_tokens);
         self.distributed_tokens += amount_tokens;
@@ -290,12 +290,11 @@ async fn main() {
 
         ThreadAction::LikeReply(payload) => {
             if let Some(thread) = thread_state_mut().storage.get_mut(&payload.thread_id) {
-                let parsed_amount: u128 = payload.amount.parse().unwrap();
-                thread.participants.entry(msg::source()).or_insert(parsed_amount);
+                thread.participants.entry(msg::source()).or_insert(payload.amount);
                 if let Some(reply) = thread.replies.get_mut(&payload.reply_id) {
-                    reply.likes += parsed_amount;
+                    reply.likes += payload.amount;
                 };
-                thread.tokens_transfer_pay(1).await;
+                thread.tokens_transfer_pay(payload.amount).await;
             };
         }
     };

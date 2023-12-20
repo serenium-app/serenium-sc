@@ -27,7 +27,7 @@ pub struct AddReplyPayload {
 #[derive(Encode, Decode, TypeInfo)]
 pub struct LikeReplyPayload {
     pub thread_id: String,
-    pub amount: String,
+    pub amount: u128,
     pub reply_id: String
 }
 
