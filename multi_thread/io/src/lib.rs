@@ -1,6 +1,5 @@
 #![no_std]
 
-use core::ops::Add;
 use gstd::{prelude::*, ActorId};
 use gmeta::{In, InOut, Metadata};
 
@@ -20,6 +19,7 @@ pub struct AddReplyPayload {
     pub thread_id: String,
     pub title: String,
     pub content:  String,
+    pub photo_url: String,
     pub reply_id: String,
     pub referral_reply_id: String
 }
@@ -37,6 +37,7 @@ pub struct ThreadReply {
     pub owner: ActorId,
     pub title: String,
     pub content: String,
+    pub photo_url: String,
     pub likes: u128,
     pub reports: u128,
 }

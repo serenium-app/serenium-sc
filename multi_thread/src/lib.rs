@@ -272,6 +272,7 @@ async fn main() {
                     owner: msg::source(),
                     title: payload.title,
                     content: payload.content,
+                    photo_url: payload.photo_url,
                     likes: 0,
                     reports: 0,
                 });
