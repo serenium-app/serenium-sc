@@ -31,32 +31,6 @@ pub struct LikeReplyPayload {
     pub reply_id: String
 }
 
-#[derive(Encode, Decode, TypeInfo, PartialEq, Eq, Clone, Debug)]
-pub struct ThreadReply {
-    pub id: String,
-    pub owner: ActorId,
-    pub title: String,
-    pub content: String,
-    pub photo_url: String,
-    pub likes: u128,
-    pub reports: u128,
-}
-
-#[derive(Default, Encode, Decode, Clone, TypeInfo)]
-pub struct Thread {
-    pub id: String,
-    pub owner: ActorId,
-    pub thread_type: ThreadType,
-    pub title: String,
-    pub content: String,
-    pub photo_url: String,
-    pub replies: Vec<(String, ThreadReply)>,
-    pub participants:Vec<(ActorId, u128)>,
-    pub thread_status: ThreadStatus,
-    pub distributed_tokens: u128,
-    pub graph_rep: Vec<(String, Vec<String>)>
-}
-
 #[derive( Encode, Decode, Clone, TypeInfo)]
 #[derive(Default)]
 pub enum ThreadType {
@@ -136,11 +110,22 @@ pub struct IoThread {
     pub title: String,
     pub content: String,
     pub photo_url: String,
-    pub replies: Vec<(String, ThreadReply)>,
-    pub participants:Vec<(ActorId, u128)>,
+    pub replies: Vec<(String, IoThreadReply)>,
     pub thread_status: ThreadStatus,
     pub distributed_tokens: u128,
     pub graph_rep: Vec<(String, Vec<String>)>
+}
+
+#[derive(Encode, Decode, TypeInfo, PartialEq, Eq, Clone, Debug)]
+pub struct IoThreadReply {
+    pub id: String,
+    pub owner: ActorId,
+    pub title: String,
+    pub content: String,
+    pub photo_url: String,
+    pub likes: u128,
+    pub reports: u128,
+    pub like_history: Vec<(ActorId, u128)>
 }
 
 pub struct ContractMetadata;

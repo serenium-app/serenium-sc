@@ -31,10 +31,21 @@ struct Thread {
     content: String,
     photo_url: String,
     replies: HashMap<String, ThreadReply>,
-    participants: HashMap<ActorId, u128>,
     thread_status: ThreadStatus,
     distributed_tokens: u128,
     graph_rep: HashMap<String, Vec<String>>
+}
+
+#[derive(Clone, Default)]
+pub struct ThreadReply {
+    pub id: String,
+    pub owner: ActorId,
+    pub title: String,
+    pub content: String,
+    pub photo_url: String,
+    pub likes: u128,
+    pub reports: u128,
+    pub like_history: HashMap<ActorId, u128>
 }
 
 impl Thread {
@@ -54,7 +65,6 @@ impl Thread {
             content,
             photo_url,
             replies: HashMap::new(),
-            participants: HashMap::new(),
             thread_status: ThreadStatus::Active,
             distributed_tokens: 0,
             graph_rep: HashMap::new(),
@@ -85,39 +95,21 @@ impl Thread {
 
     async fn tokens_transfer_pay(&mut self, amount_tokens: u128) {
         self.transfer_tokens(amount_tokens).await;
-        self.participants.entry(msg::source()).or_insert(amount_tokens);
         self.distributed_tokens += amount_tokens;
     }
 
-    fn find_winner_actor_id(&mut self) -> Option<&ActorId> {
-        if let Some(thread) = thread_state_mut().storage.get_mut(&self.id) {
+    fn find_winner_reply(&self) -> Option<&ThreadReply> {
+        if let Some(thread) = thread_state_mut().storage.get(&self.id) {
             let mut max_likes = 0;
-            let mut actor_id_with_most_likes: Option<&ActorId> = None;
+            let mut winner_reply: Option<&ThreadReply> = None;
 
             for (_, reply) in &thread.replies {
                 if reply.likes > max_likes {
                     max_likes = reply.likes;
-                    actor_id_with_most_likes = Some(&reply.owner);
+                    winner_reply = Some(&reply);
                 }
             }
-            actor_id_with_most_likes
-        } else {
-            None
-        }
-    }
-
-    fn find_winner_post_id(&self) -> Option<&String> {
-        if let Some(thread) = thread_state_mut().storage.get_mut(&self.id) {
-            let mut max_likes = 0;
-            let mut post_id_winner: Option<&String> = None;
-
-            for (_, reply) in &thread.replies {
-                if reply.likes > max_likes {
-                    max_likes = reply.likes;
-                    post_id_winner = Some(&reply.id);
-                }
-            }
-            post_id_winner
+            winner_reply
         } else {
             None
         }
@@ -127,8 +119,8 @@ impl Thread {
         let mut path_winners: Vec<ActorId> = Vec::new();
         path_winners.push(self.owner.clone());
 
-        let winner_id = match self.find_winner_post_id() {
-            Some(id) => id,
+        let winner_id = match self.find_winner_reply() {
+            Some(reply) => &reply.id,
             None => return path_winners,
         };
 
@@ -160,11 +152,24 @@ impl Thread {
                 break; // Invalid target_id or no adjacency list found
             }
         }
-
-
         path_winners
     }
 
+    fn find_likes_winner(&mut self, winner_reply_id: String) -> Option<ActorId> {
+        if let Some(winner_reply) = self.replies.get_mut(&winner_reply_id) {
+            let mut max_actor: Option<ActorId> = None;
+            let mut max_likes = 0;
+            for (&actor, &num_likes) in &winner_reply.like_history {
+                if num_likes > max_likes {
+                    max_actor = Some(actor);
+                    max_likes = num_likes;
+                }
+            }
+            max_actor
+        } else {
+            None
+        }
+    }
 }
 
 static mut THREADS: Option<Threads> = None;
@@ -236,16 +241,19 @@ async fn main() {
             if let Some(thread) = thread_state_mut().storage.get_mut(&thread_id) {
                 thread.thread_status = ThreadStatus::Expired;
 
-                if let Some(winner) = thread.find_winner_actor_id() {
-                    // let tokens_for_abs_winner = thread.distributed_tokens.clone() * 4 / 10;
-
+                if let Some(winner_reply) = thread.find_winner_reply() {
                     let address_ft = addresft_state_mut();
-                    let payload = FTAction::Transfer{from: exec::program_id(), to: *winner, amount: thread.distributed_tokens.clone() * 4 / 10};
+                    let payload = FTAction::Transfer{from: exec::program_id(), to: winner_reply.owner.clone(), amount: thread.distributed_tokens.clone() * 4 / 10};
+                    let _ = msg::send(address_ft.ft_program_id, payload, 0);
+
+                    // Transfer tokens to top liker of winner
+                    let top_liker_winner = thread.find_likes_winner(winner_reply.id.clone()).expect("Top liker not found");
+                    let payload = FTAction::Transfer{from: exec::program_id(), to: top_liker_winner, amount: thread.distributed_tokens.clone() * 3 / 10};
                     let _ = msg::send(address_ft.ft_program_id, payload, 0);
 
                     let path_winners = thread.find_path_to_winner(&thread.id);
                     if !path_winners.is_empty() {
-                        let tokens_for_each_path_winner = thread.distributed_tokens.clone() * 4 / 10 / path_winners.len() as u128;
+                        let tokens_for_each_path_winner = thread.distributed_tokens.clone() * 3 / 10 / path_winners.len() as u128;
 
                         for actor in path_winners {
                             thread.tokens_transfer_reward(tokens_for_each_path_winner, actor).await;
@@ -268,6 +276,7 @@ async fn main() {
                     photo_url: payload.photo_url,
                     likes: 0,
                     reports: 0,
+                    like_history: HashMap::new()
                 });
 
                 thread.graph_rep.entry(payload.reply_id.clone()).or_insert_with(Vec::new);
@@ -283,9 +292,12 @@ async fn main() {
 
         ThreadAction::LikeReply(payload) => {
             if let Some(thread) = thread_state_mut().storage.get_mut(&payload.thread_id) {
-                thread.participants.entry(msg::source()).or_insert(payload.amount);
                 if let Some(reply) = thread.replies.get_mut(&payload.reply_id) {
                     reply.likes += payload.amount;
+                    reply.like_history
+                        .entry(msg::source())
+                        .and_modify(|likes| *likes += payload.amount)
+                        .or_insert(payload.amount);
                     thread.tokens_transfer_pay(payload.amount).await;
                 };
             };
@@ -315,6 +327,24 @@ impl From<Threads> for IoThreads {
         let threads: Vec<(String, IoThread)> = storage
             .into_iter()
             .map(|(key, thread)| {
+                let io_replies: Vec<(String, IoThreadReply)> = thread.replies.iter()
+                    .map(|(k, v)| {
+                        // Conversion for IoThreadReply, adjust as needed
+                        let io_reply = IoThreadReply {
+                            id: v.id.clone(),
+                            owner: v.owner.clone(),
+                            title: v.title.clone(),
+                            content: v.content.clone(),
+                            photo_url: v.photo_url.clone(),
+                            likes: v.likes,
+                            reports: v.reports,
+                            // Convert like_history HashMap<ActorId, u128> to Vec<(ActorId, u128)>
+                            like_history: v.like_history.iter().map(|(k, v)| (*k, *v)).collect(),
+                        };
+                        (k.clone(), io_reply)
+                    })
+                    .collect();
+
                 let io_thread = IoThread {
                     id: thread.id.clone(),
                     owner: thread.owner.clone(),
@@ -322,11 +352,10 @@ impl From<Threads> for IoThreads {
                     title: thread.title.clone(),
                     content: thread.content.clone(),
                     photo_url: thread.photo_url.clone(),
-                    participants: thread.participants.iter().map(|(k, v)| (*k, v.clone())).collect(),
-                    replies: thread.replies.iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
+                    replies: io_replies,
                     thread_status: thread.thread_status.clone(),
                     distributed_tokens: thread.distributed_tokens.clone(),
-                    graph_rep: thread.graph_rep.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
+                    graph_rep: thread.graph_rep.iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
                 };
                 (key, io_thread)
             })
