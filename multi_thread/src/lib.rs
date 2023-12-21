@@ -61,9 +61,9 @@ impl Thread {
         }
     }
 
-    async fn mint_thread_contract(&mut self, amount_tokens: u128) {
+    async fn mint_thread_contract(&mut self) {
         let address_ft = addresft_state_mut();
-        let payload = FTAction::Mint(amount_tokens);
+        let payload = FTAction::Mint(1);
         let _ = msg::send(address_ft.ft_program_id, payload, 0);
     }
 
@@ -77,12 +77,6 @@ impl Thread {
         let _transfer = msg::send(address_ft.ft_program_id, transfer_payload, 0);
     }
 
-    async fn burn_thread_contract(&mut self, amount_tokens: u128) {
-        let address_ft = addresft_state_mut();
-        let payload = FTAction::Burn(amount_tokens);
-        let _ = msg::send(address_ft.ft_program_id, payload, 0);
-    }
-
     async fn tokens_transfer_reward(&mut self, amount_tokens: u128, dest: ActorId) {
         let address_ft = addresft_state_mut();
         let payload = FTAction::Transfer{from: exec::program_id(), to: dest, amount: amount_tokens};
@@ -90,10 +84,7 @@ impl Thread {
     }
 
     async fn tokens_transfer_pay(&mut self, amount_tokens: u128) {
-        self.mint_thread_contract(amount_tokens).await;
         self.transfer_tokens(amount_tokens).await;
-        self.burn_thread_contract(amount_tokens).await;
-
         self.participants.entry(msg::source()).or_insert(amount_tokens);
         self.distributed_tokens += amount_tokens;
     }
@@ -219,8 +210,11 @@ async fn main() {
 
     match action {
         ThreadAction::NewThread(init_thread) =>  {
+
             let threads = &mut thread_state_mut().storage;
             let mut new_thread: Thread = Thread::new(init_thread.id, msg::source(), init_thread.thread_type, init_thread.title, init_thread.content, init_thread.photo_url);
+
+            new_thread.mint_thread_contract().await;
 
             // Immediately push thread id to graph
             new_thread.graph_rep.insert(new_thread.id.clone(), Vec::new());
@@ -264,7 +258,6 @@ async fn main() {
             }
         }
 
-
         ThreadAction::AddReply(payload) => {
             if let Some(thread) = thread_state_mut().storage.get_mut(&payload.thread_id) {
                 let _reply_user = thread.replies.entry(payload.reply_id.clone()).or_insert(ThreadReply {
@@ -293,8 +286,8 @@ async fn main() {
                 thread.participants.entry(msg::source()).or_insert(payload.amount);
                 if let Some(reply) = thread.replies.get_mut(&payload.reply_id) {
                     reply.likes += payload.amount;
+                    thread.tokens_transfer_pay(payload.amount).await;
                 };
-                thread.tokens_transfer_pay(payload.amount).await;
             };
         }
     };
