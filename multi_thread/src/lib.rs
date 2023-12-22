@@ -323,7 +323,6 @@ async fn main() {
         ThreadAction::LikeReply(payload) => {
             if let Some(thread) = thread_state_mut().storage.get_mut(&payload.thread_id) {
                 if let Some(reply) = thread.replies.get_mut(&payload.reply_id) {
-                    // If msg::source() is owner of reply, panic. A user cannot like its own reply.
                     if msg::source() == reply.owner {
                         panic!("User cannot like its own reply");
                     }
