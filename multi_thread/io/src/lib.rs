@@ -57,10 +57,25 @@ pub enum ThreadAction {
 
 #[derive(Encode, Decode, TypeInfo, PartialEq, Eq, Clone, Debug)]
 pub enum ThreadEvent {
-    NewThreadCreated,
-    ThreadEnded,
-    ReplyAdded,
-    ReplyLiked
+    NewThreadCreated {
+        by: ActorId,
+        id: String
+    },
+    ThreadEnded {
+        thread_id: String,
+        transfers: Vec<(ActorId, u128)>
+    },
+    ReplyAdded {
+        by: ActorId,
+        id: String,
+        on_thread: String
+    },
+    ReplyLiked {
+        by: ActorId,
+        like_count: u128,
+        on_reply: String,
+        on_thread: String
+    }
 }
 
 #[derive(Debug, Decode, Encode, TypeInfo)]

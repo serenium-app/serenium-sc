@@ -232,9 +232,16 @@ async fn main() {
             // transfer a token
             new_thread.tokens_transfer_pay(1).await;
 
+            msg::reply(
+                ThreadEvent::NewThreadCreated {
+                    by: msg::source(),
+                    id: new_thread.id.clone()
+                },
+                0)
+                .unwrap();
+
             // push new thread to vector of threads
             threads.insert(new_thread.id.clone(), new_thread);
-
         }
 
         ThreadAction::EndThread(thread_id) => {
@@ -242,23 +249,37 @@ async fn main() {
                 thread.thread_status = ThreadStatus::Expired;
 
                 if let Some(winner_reply) = thread.find_winner_reply() {
+                    let mut transaction_log: Vec<(ActorId, u128)> = Vec::new();
+
                     let address_ft = addresft_state_mut();
                     let payload = FTAction::Transfer{from: exec::program_id(), to: winner_reply.owner.clone(), amount: thread.distributed_tokens.clone() * 4 / 10};
                     let _ = msg::send(address_ft.ft_program_id, payload, 0);
+                    transaction_log.push((winner_reply.owner.clone(), thread.distributed_tokens.clone() * 4 / 10));
 
                     // Transfer tokens to top liker of winner
                     let top_liker_winner = thread.find_likes_winner(winner_reply.id.clone()).expect("Top liker not found");
                     let payload = FTAction::Transfer{from: exec::program_id(), to: top_liker_winner, amount: thread.distributed_tokens.clone() * 3 / 10};
                     let _ = msg::send(address_ft.ft_program_id, payload, 0);
+                    transaction_log.push((top_liker_winner.clone(), thread.distributed_tokens.clone() * 3 / 10));
 
                     let path_winners = thread.find_path_to_winner(&thread.id);
                     if !path_winners.is_empty() {
                         let tokens_for_each_path_winner = thread.distributed_tokens.clone() * 3 / 10 / path_winners.len() as u128;
 
                         for actor in path_winners {
+                            transaction_log.push((actor.clone(), thread.distributed_tokens.clone() * 3 / 10));
                             thread.tokens_transfer_reward(tokens_for_each_path_winner, actor).await;
                         }
                     }
+
+                    msg::reply(
+                        ThreadEvent::ThreadEnded {
+                            thread_id: thread.id.clone(),
+                            transfers: transaction_log
+                        },
+                        0)
+                        .unwrap();
+
                 } else {
                     // Handle case when winner is not found
                     return; // Exiting early if there's no winner
@@ -286,6 +307,15 @@ async fn main() {
                     adj_list.push(payload.reply_id.clone());
                 }
 
+                msg::reply(
+                    ThreadEvent::ReplyAdded {
+                        by: msg::source(),
+                        id: _reply_user.id.clone(),
+                        on_thread: thread.id.clone()
+                    },
+                    0)
+                    .unwrap();
+
                 thread.tokens_transfer_pay(1).await;
             };
         }
@@ -298,6 +328,17 @@ async fn main() {
                         .entry(msg::source())
                         .and_modify(|likes| *likes += payload.amount)
                         .or_insert(payload.amount);
+
+                    msg::reply(
+                        ThreadEvent::ReplyLiked {
+                            by: msg::source(),
+                            like_count: payload.amount,
+                            on_reply: reply.id.clone(),
+                            on_thread: thread.id.clone()
+                        },
+                        0)
+                        .unwrap();
+
                     thread.tokens_transfer_pay(payload.amount).await;
                 };
             };
