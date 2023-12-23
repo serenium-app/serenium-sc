@@ -5,6 +5,7 @@ use hashbrown::HashMap;
 use hashbrown::HashSet;
 use io::*;
 use gstd::{async_main, exec, msg, prelude::*, ActorId,};
+use io::ThreadEvent::ThreadEnded;
 
 #[cfg(feature = "binary-vendor")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
@@ -48,6 +49,108 @@ pub struct ThreadReply {
     pub like_history: HashMap<ActorId, u128>
 }
 
+#[derive(Clone, Default)]
+pub struct ThreadExpired {
+    winner_reply: ThreadReply,
+    top_liker_winner: ActorId,
+    path_winners: Vec<ActorId>,
+    transaction_log: Vec<(ActorId, u128)>,
+}
+
+impl ThreadExpired {
+    fn new(
+        thread: &mut Thread
+    ) -> Self {
+        let mut instance = ThreadExpired {
+            winner_reply: Default::default(),
+            top_liker_winner: Default::default(),
+            path_winners: Vec::new(),
+            transaction_log: Vec::new(),
+        };
+        instance.find_winner_reply(thread);
+        instance.find_likes_winner(thread);
+        instance.find_path_to_winner(thread);
+        instance
+    }
+
+    fn find_winner_reply(&mut self, thread: &Thread) {
+        if let Some(thread) = thread_state_mut().storage.get(&thread.id) {
+            let mut max_likes = 0;
+            let mut winner_reply: Option<ThreadReply> = None;
+
+            for (_, reply) in &thread.replies {
+                if reply.likes > max_likes {
+                    max_likes = reply.likes;
+                    winner_reply = Some(reply.clone());
+                }
+            }
+            self.winner_reply = winner_reply.unwrap();
+        }
+    }
+
+    fn find_path_to_winner(&mut self, thread: &Thread) {
+        self.path_winners.push(thread.owner.clone());
+
+        let mut target_id = &self.winner_reply.id;
+
+        // Convert adjacency lists into a HashMap for efficient lookups
+        let adjacency_map: HashMap<&String, &Vec<String>> = thread.graph_rep.iter().collect();
+
+        // Use a HashSet to keep track of visited nodes to avoid cycles
+        let mut visited: HashSet<String> = HashSet::new();
+
+        while *target_id != *thread.id {
+            if let Some(adj_list) = adjacency_map.get(&target_id) {
+                if let Some(reply_id) = adj_list.iter()
+                    .find(|&reply_id| !visited.contains(reply_id))
+                {
+                    visited.insert(reply_id.clone());
+                    if let Some(reply) = thread.replies.get(reply_id) {
+                        let actor_id = reply.owner.clone();
+                        self.path_winners.push(actor_id.clone());
+                        target_id = &reply_id; // Set target_id to the reply_id for the next iteration
+                    } else {
+                        break; // Unable to retrieve reply or actor_id associated with it
+                    }
+                } else {
+                    break; // No further nodes to explore
+                }
+            } else {
+                break; // Invalid target_id or no adjacency list found
+            }
+        }
+    }
+
+    fn find_likes_winner(&mut self, thread: &Thread) {
+        if let Some(winner_reply) = thread.replies.get(&self.winner_reply.id) {
+            let mut max_actor: Option<ActorId> = None;
+            let mut max_likes = 0;
+
+            for (&actor, &num_likes) in &winner_reply.like_history {
+                if num_likes > max_likes {
+                    max_actor = Some(actor);
+                    max_likes = num_likes;
+                }
+            }
+            self.top_liker_winner = max_actor.unwrap();
+        }
+    }
+
+    async fn process_path_winners(&mut self, thread: &Thread) {
+        if !self.path_winners.is_empty() {
+            let tokens_for_each_path_winner = thread.distributed_tokens.clone() * 3 / 10 / self.path_winners.len() as u128;
+            for actor in &mut self.path_winners {
+                self.transaction_log.push((*actor, tokens_for_each_path_winner))
+            }
+            for actor in &mut self.path_winners {
+                transfer_tokens_reward(tokens_for_each_path_winner, *actor)
+                    .await
+                    .unwrap_or_else(|_| panic!("Token transfer failed!"));
+            }
+        }
+    }
+}
+
 impl Thread {
     fn new(
         id: String,
@@ -76,100 +179,40 @@ impl Thread {
         let payload = FTAction::Mint(1);
         let _ = msg::send(address_ft.ft_program_id, payload, 0);
     }
+}
 
-    async fn transfer_tokens(&mut self, amount_tokens: u128) {
-        let address_ft = addresft_state_mut();
-        let transfer_payload = FTAction::Transfer {
-            from: msg::source(),
-            to: exec::program_id(),
-            amount: amount_tokens
-        };
-        let _transfer = msg::send(address_ft.ft_program_id, transfer_payload, 0);
-    }
+async fn transfer_tokens_to_contract(amount_tokens: u128) -> Result<(), ()> {
+    let address_ft = addresft_state_mut();
+    let transfer_payload = FTAction::Transfer {
+        from: msg::source(),
+        to: exec::program_id(),
+        amount: amount_tokens
+    };
+    let result =  msg::send_for_reply_as::<_, FTEvent>(address_ft.ft_program_id, transfer_payload,0,0).expect("Error in sending a message").await;
+    let status = match result {
+        Ok(event) => match event {
+            FTEvent::Ok => Ok(()),
+            _ => Err(()),
+        },
+        Err(_) => Err(())
+    };
+    status
+}
 
-    async fn tokens_transfer_reward(&mut self, amount_tokens: u128, dest: ActorId) {
-        let address_ft = addresft_state_mut();
-        let payload = FTAction::Transfer{from: exec::program_id(), to: dest, amount: amount_tokens};
-        let _ = msg::send(address_ft.ft_program_id, payload, 0);
-    }
-
-    async fn tokens_transfer_pay(&mut self, amount_tokens: u128) {
-        self.transfer_tokens(amount_tokens).await;
-        self.distributed_tokens += amount_tokens;
-    }
-
-    fn find_winner_reply(&self) -> Option<&ThreadReply> {
-        if let Some(thread) = thread_state_mut().storage.get(&self.id) {
-            let mut max_likes = 0;
-            let mut winner_reply: Option<&ThreadReply> = None;
-
-            for (_, reply) in &thread.replies {
-                if reply.likes > max_likes {
-                    max_likes = reply.likes;
-                    winner_reply = Some(&reply);
-                }
-            }
-            winner_reply
-        } else {
-            None
-        }
-    }
-
-    fn find_path_to_winner(&self, original_post_id: &String) -> Vec<ActorId> {
-        let mut path_winners: Vec<ActorId> = Vec::new();
-        path_winners.push(self.owner.clone());
-
-        let winner_id = match self.find_winner_reply() {
-            Some(reply) => &reply.id,
-            None => return path_winners,
-        };
-
-        let mut target_id = winner_id;
-
-        // Convert adjacency lists into a HashMap for efficient lookups
-        let adjacency_map: HashMap<&String, &Vec<String>> = self.graph_rep.iter().collect();
-
-        // Use a HashSet to keep track of visited nodes to avoid cycles
-        let mut visited: HashSet<String> = HashSet::new();
-
-        while *target_id != *original_post_id {
-            if let Some(adj_list) = adjacency_map.get(&target_id) {
-                if let Some(reply_id) = adj_list.iter()
-                    .find(|&reply_id| !visited.contains(reply_id))
-                {
-                    visited.insert(reply_id.clone());
-                    if let Some(reply) = self.replies.get(reply_id) {
-                        let actor_id = reply.owner.clone();
-                        path_winners.push(actor_id.clone());
-                        target_id = &reply_id; // Set target_id to the reply_id for the next iteration
-                    } else {
-                        break; // Unable to retrieve reply or actor_id associated with it
-                    }
-                } else {
-                    break; // No further nodes to explore
-                }
-            } else {
-                break; // Invalid target_id or no adjacency list found
-            }
-        }
-        path_winners
-    }
-
-    fn find_likes_winner(&mut self, winner_reply_id: String) -> Option<ActorId> {
-        if let Some(winner_reply) = self.replies.get_mut(&winner_reply_id) {
-            let mut max_actor: Option<ActorId> = None;
-            let mut max_likes = 0;
-            for (&actor, &num_likes) in &winner_reply.like_history {
-                if num_likes > max_likes {
-                    max_actor = Some(actor);
-                    max_likes = num_likes;
-                }
-            }
-            max_actor
-        } else {
-            None
-        }
-    }
+async fn transfer_tokens_reward(amount_tokens: u128, dest: ActorId) -> Result<(), ()> {
+    let address_ft = addresft_state_mut();
+    let payload = FTAction::Transfer{from: exec::program_id(), to: dest, amount: amount_tokens};
+    let result = msg::send_for_reply_as::<_, FTEvent>(address_ft.ft_program_id, payload, 0, 0)
+        .expect("Error in sending a message")
+        .await;
+    let status = match result {
+        Ok(event) => match event {
+            FTEvent::Ok => Ok(()),
+            _ => Err(()),
+        },
+        Err(_) => Err(())
+    };
+    status
 }
 
 static mut THREADS: Option<Threads> = None;
@@ -215,22 +258,23 @@ async fn main() {
 
     match action {
         ThreadAction::NewThread(init_thread) =>  {
-
             let threads = &mut thread_state_mut().storage;
             let mut new_thread: Thread = Thread::new(init_thread.id, msg::source(), init_thread.thread_type, init_thread.title, init_thread.content, init_thread.photo_url);
 
-            new_thread.mint_thread_contract().await;
+            new_thread.mint_thread_contract()
+                .await;
 
-            // Immediately push thread id to graph
+            transfer_tokens_to_contract(1)
+                .await
+                .unwrap_or_else(|_| panic!("Token transfer failed!"));
+
+            new_thread.distributed_tokens += 1;
             new_thread.graph_rep.insert(new_thread.id.clone(), Vec::new());
 
             // send delayed message to expire thread
             let payload = ThreadAction::EndThread(new_thread.id.clone());
             let delay = 1000;
             let _end_thread_msg = msg::send_delayed(exec::program_id(), payload, 0, delay).expect("Delayed expiration msg was not successfully sent");
-
-            // transfer a token
-            new_thread.tokens_transfer_pay(1).await;
 
             msg::reply(
                 ThreadEvent::NewThreadCreated {
@@ -247,48 +291,37 @@ async fn main() {
         ThreadAction::EndThread(thread_id) => {
             if let Some(thread) = thread_state_mut().storage.get_mut(&thread_id) {
                 thread.thread_status = ThreadStatus::Expired;
+                let mut thread_expired = ThreadExpired::new(thread);
 
-                if let Some(winner_reply) = thread.find_winner_reply() {
-                    let mut transaction_log: Vec<(ActorId, u128)> = Vec::new();
+                transfer_tokens_reward(thread.distributed_tokens.clone() * 4 / 10, thread_expired.winner_reply.owner)
+                    .await
+                    .unwrap_or_else(|_| panic!("Token transfer failed!"));
+                thread_expired.transaction_log.push((thread_expired.winner_reply.owner, thread.distributed_tokens.clone() * 4 / 10));
 
-                    let address_ft = addresft_state_mut();
-                    let payload = FTAction::Transfer{from: exec::program_id(), to: winner_reply.owner.clone(), amount: thread.distributed_tokens.clone() * 4 / 10};
-                    let _ = msg::send(address_ft.ft_program_id, payload, 0);
-                    transaction_log.push((winner_reply.owner.clone(), thread.distributed_tokens.clone() * 4 / 10));
+                transfer_tokens_reward(thread.distributed_tokens.clone() * 4 / 10, thread_expired.top_liker_winner.clone())
+                    .await
+                    .unwrap_or_else(|_| panic!("Token transfer failed!"));
+                thread_expired.transaction_log.push((thread_expired.top_liker_winner, thread.distributed_tokens.clone() * 4 / 10));
 
-                    // Transfer tokens to top liker of winner
-                    let top_liker_winner = thread.find_likes_winner(winner_reply.id.clone()).expect("Top liker not found");
-                    let payload = FTAction::Transfer{from: exec::program_id(), to: top_liker_winner, amount: thread.distributed_tokens.clone() * 3 / 10};
-                    let _ = msg::send(address_ft.ft_program_id, payload, 0);
-                    transaction_log.push((top_liker_winner.clone(), thread.distributed_tokens.clone() * 3 / 10));
+                thread_expired.process_path_winners(thread).await;
 
-                    let path_winners = thread.find_path_to_winner(&thread.id);
-                    if !path_winners.is_empty() {
-                        let tokens_for_each_path_winner = thread.distributed_tokens.clone() * 3 / 10 / path_winners.len() as u128;
-
-                        for actor in path_winners {
-                            transaction_log.push((actor.clone(), thread.distributed_tokens.clone() * 3 / 10));
-                            thread.tokens_transfer_reward(tokens_for_each_path_winner, actor).await;
-                        }
+                msg::reply(
+                    ThreadEnded {
+                        thread_id: thread.id.clone(),
+                        transfers: thread_expired.transaction_log
                     }
-
-                    msg::reply(
-                        ThreadEvent::ThreadEnded {
-                            thread_id: thread.id.clone(),
-                            transfers: transaction_log
-                        },
-                        0)
-                        .unwrap();
-
-                } else {
-                    // Handle case when winner is not found
-                    return; // Exiting early if there's no winner
-                }
+                    , 0
+                    )
+                    .unwrap();
             }
         }
 
         ThreadAction::AddReply(payload) => {
             if let Some(thread) = thread_state_mut().storage.get_mut(&payload.thread_id) {
+                transfer_tokens_to_contract(1)
+                    .await
+                    .unwrap_or_else(|_| panic!("Token transfer failed!"));
+
                 let _reply_user = thread.replies.entry(payload.reply_id.clone()).or_insert(ThreadReply {
                     id: payload.reply_id.clone(),
                     owner: msg::source(),
@@ -307,6 +340,8 @@ async fn main() {
                     adj_list.push(payload.reply_id.clone());
                 }
 
+                thread.distributed_tokens += 1;
+
                 msg::reply(
                     ThreadEvent::ReplyAdded {
                         by: msg::source(),
@@ -315,8 +350,6 @@ async fn main() {
                     },
                     0)
                     .unwrap();
-
-                thread.tokens_transfer_pay(1).await;
             };
         }
 
@@ -326,11 +359,18 @@ async fn main() {
                     if msg::source() == reply.owner {
                         panic!("User cannot like its own reply");
                     }
+
+                    transfer_tokens_to_contract(payload.amount)
+                        .await
+                        .unwrap_or_else(|_| panic!("Token transfer failed!"));
+
                     reply.likes += payload.amount;
                     reply.like_history
                         .entry(msg::source())
                         .and_modify(|likes| *likes += payload.amount)
                         .or_insert(payload.amount);
+
+                    thread.distributed_tokens += 1;
 
                     msg::reply(
                         ThreadEvent::ReplyLiked {
@@ -341,8 +381,6 @@ async fn main() {
                         },
                         0)
                         .unwrap();
-
-                    thread.tokens_transfer_pay(payload.amount).await;
                 };
             };
         }
@@ -404,7 +442,6 @@ impl From<Threads> for IoThreads {
                 (key, io_thread)
             })
             .collect();
-
         Self { threads }
     }
 }
