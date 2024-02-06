@@ -21,6 +21,7 @@ pub struct InitConfig {
     pub name: String,
     pub symbol: String,
     pub decimals: u8,
+    pub allowed_minters: Vec<ActorId>
 }
 
 #[derive(Debug, Decode, Encode, TypeInfo)]

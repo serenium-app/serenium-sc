@@ -1,39 +1,31 @@
-[package]
-name = "multi_thread"
+[workspace.package]
+name = "serenium-new-sc-test"
 version = "0.1.0"
 edition = "2021"
 
-[dependencies]
-io = { path = "io" }
-gstd = { git = "https://github.com/gear-tech/gear.git", rev = "946ac47" }
-gmeta = { git = "https://github.com/gear-tech/gear.git", rev = "946ac47" }
-scale-info = { version = "2", default-features = false }
-parity-scale-codec = { version = "3", default-features = false }
-hashbrown = "0.14"
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[build-dependencies]
-io = { path = "io" }
-gear-wasm-builder = { git = "https://github.com/gear-tech/gear.git", rev = "946ac47" }
-gmeta = { git = "https://github.com/gear-tech/gear.git", rev = "946ac47" }
-
-[dev-dependencies]
-state = { path = "state" }
-gtest = { git = "https://github.com/gear-tech/gear.git", rev = "946ac47" }
-gstd = { git = "https://github.com/gear-tech/gear.git", rev = "946ac47", features = ["debug"] }
-tokio = "1"
-gclient = { git = "https://github.com/gear-tech/gear.git", rev = "946ac47" }
-
-[features]
-# Used for inserting constants with WASM binaries (NOT paths) of the contract in
-# the root crate. Usually these constants used in gclient tests instead of
-# strings with paths to the binaries in the "target" directory. If you don't
-# like this approach or don't use gclient tests, you can freely remove this
-# feature from here and from the rest of the code.
-binary-vendor = []
-wasm-opt = ["gear-wasm-builder/wasm-opt"]
-default = ["binary-vendor", "wasm-opt"]
-
-# It's necessary to include all metawasm crates in the workspace section,
-# otherwise they'll be ignored by Cargo and won't be built.
 [workspace]
-members = ["state"]
+resolver = "2"
+members = ["storage", "logic", "reward-logic"]
+
+[workspace.dependencies]
+gclient = { git = "https://github.com/gear-tech/gear", tag = "v1.0.2" }
+gear-core = { git = "https://github.com/gear-tech/gear", tag = "v1.0.2" }
+gear-wasm-builder = { git = "https://github.com/gear-tech/gear", tag = "v1.0.2" }
+gmeta = { git = "https://github.com/gear-tech/gear", tag = "v1.0.2" }
+gsdk = { git = "https://github.com/gear-tech/gear", tag = "v1.0.2" }
+gstd = { git = "https://github.com/gear-tech/gear", tag = "v1.0.2" }
+gtest = { git = "https://github.com/gear-tech/gear", tag = "v1.0.2" }
+
+io.path = "io"
+storage-io.path = "storage/io"
+logic-io.path = "logic/io"
+reward-logic-io.path = "reward-logic/io"
+
+tokio = "1"
+
+# External binaries
+sharded-fungible-token = { git = "https://github.com/gear-foundation/dapps", tag = "v1.0.2" }
+sharded-fungible-token-logic = { git = "https://github.com/gear-foundation/dapps", tag = "v1.0.2" }
+sharded-fungible-token-storage = { git = "https://github.com/gear-foundation/dapps", tag = "v1.0.2" }

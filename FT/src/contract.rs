@@ -1,6 +1,7 @@
 use ft_io::*;
 use gmeta::Metadata;
 use gstd::{errors::Result as GstdResult, msg, prelude::*, ActorId, MessageId};
+use gstd::ext::panic;
 use hashbrown::HashMap;
 
 const ZERO_ID: ActorId = ActorId::new([0u8; 32]);
@@ -17,6 +18,8 @@ struct FungibleToken {
     balances: HashMap<ActorId, u128>,
     /// Map to hold allowance information of token holders.
     allowances: HashMap<ActorId, HashMap<ActorId, u128>>,
+    /// Vector to hold the authorized minters
+    allowed_minters: Vec<ActorId>,
     /// Token's decimals.
     pub decimals: u8,
 }
@@ -26,6 +29,9 @@ static mut FUNGIBLE_TOKEN: Option<FungibleToken> = None;
 impl FungibleToken {
     /// Executed on receiving `fungible-token-messages::MintInput`.
     fn mint(&mut self, amount: u128) {
+        if !self.allowed_minters.contains(&msg::source()) {
+            panic!("ActorId not allowed to mint")
+        }
         let source = msg::source();
         self.balances
             .entry(source)
@@ -44,6 +50,9 @@ impl FungibleToken {
     }
 
     fn burn(&mut self, amount: u128) {
+        if !self.allowed_minters.contains(&msg::source()) {
+            panic!("ActorId not allowed to burn");
+        }
         let source = msg::source();
         if self.balances.get(&source).unwrap_or(&0) < &amount {
             panic!("Amount exceeds account balance");
@@ -138,6 +147,7 @@ fn common_state() -> <FungibleTokenMetadata as Metadata>::State {
         total_supply,
         balances,
         allowances,
+        allowed_minters,
         decimals,
     } = state.clone();
 
@@ -204,6 +214,7 @@ extern "C" fn init() {
         name: config.name,
         symbol: config.symbol,
         decimals: config.decimals,
+        allowed_minters: config.allowed_minters,
         ..Default::default()
     };
     unsafe { FUNGIBLE_TOKEN = Some(ft) };

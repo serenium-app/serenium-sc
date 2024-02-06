@@ -1,13 +1,19 @@
 [package]
-name = "io"
+name = "reward-logic"
 version.workspace = true
 edition.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+io.workspace = true
+reward-logic-io.workspace = true
 gstd.workspace = true
 gmeta.workspace = true
 
 [build-dependencies]
+reward-logic-io.workspace = true
 gear-wasm-builder.workspace = true
+
+[dev-dependencies]
+gtest.workspace = true

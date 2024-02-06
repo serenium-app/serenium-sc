@@ -1,108 +1,53 @@
 #![no_std]
 
-use gstd::{prelude::*, ActorId};
-use gmeta::{In, InOut, Metadata};
+use gstd::{collections::HashMap as GHashMap, prelude::*, ActorId};
 
-extern crate alloc;
+pub type PostId = String;
+pub type Timestamp = u64;
 
 #[derive(Encode, Decode, TypeInfo)]
-pub struct InitThread {
-    pub id: String,
-    pub thread_type: ThreadType,
+#[codec(crate = gstd::codec)]
+#[scale_info(crate = gstd::scale_info)]
+pub struct Post {
+    pub post_id: PostId,
+    pub posted_at: Timestamp,
+    pub owner: ActorId,
     pub title: String,
     pub content: String,
-    pub photo_url: String
-}
-
-#[derive(Encode, Decode, TypeInfo)]
-pub struct AddReplyPayload {
-    pub thread_id: String,
-    pub title: String,
-    pub content:  String,
     pub photo_url: String,
-    pub reply_id: String,
-    pub referral_reply_id: String
 }
 
-#[derive(Encode, Decode, TypeInfo)]
-pub struct LikeReplyPayload {
-    pub thread_id: String,
-    pub amount: u128,
-    pub reply_id: String
+pub struct Thread {
+    pub post_data: Post,
+    pub thread_status: ThreadStatus,
+    pub distributed_tokens: u64,
+    pub graph_rep: GHashMap<PostId, Vec<PostId>>,
+    pub replies: GHashMap<PostId, ThreadReply>,
 }
 
-#[derive( Encode, Decode, Clone, TypeInfo)]
-#[derive(Default)]
+pub struct ThreadReply {
+    pub post_data: Post,
+    pub reports: u64,
+    pub like_history: GHashMap<ActorId, u64>,
+    pub likes: u64,
+}
+
+#[derive(Default, Encode, Decode, TypeInfo)]
+#[codec(crate = gstd::codec)]
+#[scale_info(crate = gstd::scale_info)]
 pub enum ThreadType {
     #[default]
     Challenge,
-    Question
+    Question,
 }
 
-#[derive( Encode, Decode, Clone, TypeInfo)]
-#[derive(Default)]
+#[derive(Default, Encode, Decode, TypeInfo)]
+#[codec(crate = gstd::codec)]
+#[scale_info(crate = gstd::scale_info)]
 pub enum ThreadStatus {
     #[default]
     Active,
-    Expired
-}
-
-#[derive(Encode, Decode, TypeInfo)]
-pub enum ThreadAction {
-    NewThread(InitThread),
-    EndThread(String),
-    AddReply(AddReplyPayload),
-    LikeReply(LikeReplyPayload)
-}
-
-#[derive(Encode, Decode, TypeInfo, PartialEq, Eq, Clone, Debug)]
-pub enum ThreadEvent {
-    NewThreadCreated {
-        by: ActorId,
-        id: String
-    },
-    ThreadEnded {
-        thread_id: String,
-        transfers: Vec<(ActorId, u128)>
-    },
-    ReplyAdded {
-        by: ActorId,
-        id: String,
-        on_thread: String
-    },
-    ReplyLiked {
-        by: ActorId,
-        like_count: u128,
-        on_reply: String,
-        on_thread: String
-    }
-}
-
-#[derive(Debug, Decode, Encode, TypeInfo)]
-#[codec(crate = gstd::codec)]
-#[scale_info(crate = gstd::scale_info)]
-pub enum FTAction {
-    Mint(u128),
-    Burn(u128),
-    Transfer {
-        from: ActorId,
-        to: ActorId,
-        amount: u128,
-    },
-    Approve {
-        to: ActorId,
-        amount: u128,
-    },
-    TotalSupply,
-    BalanceOf(ActorId),
-}
-
-#[derive(Encode, Decode, TypeInfo)]
-pub enum FTEvent {
-    Ok,
-    Err,
-    Balance(u128),
-    PermitId(u128),
+    Expired,
 }
 
 #[derive(Decode, Encode, TypeInfo)]
@@ -112,44 +57,108 @@ pub struct InitFT {
     pub ft_program_id: ActorId,
 }
 
-#[derive(Default, Clone, Encode, Decode, TypeInfo)]
+#[derive(Encode, Decode, TypeInfo)]
+#[codec(crate = gstd::codec)]
+#[scale_info(crate = gstd::scale_info)]
 pub struct IoThreads {
-    pub threads: Vec<(String, IoThread)>
+    pub threads: Vec<(PostId, IoThread)>,
 }
 
-#[derive(Default, Clone, Encode, Decode, TypeInfo)]
+#[derive(Encode, Decode, TypeInfo)]
+#[codec(crate = gstd::codec)]
+#[scale_info(crate = gstd::scale_info)]
 pub struct IoThread {
-    pub id: String,
-    pub owner: ActorId,
-    pub thread_type: ThreadType,
-    pub title: String,
-    pub content: String,
-    pub photo_url: String,
-    pub replies: Vec<(String, IoThreadReply)>,
+    pub post_data: Post,
+    pub replies: Vec<(PostId, IoThreadReply)>,
     pub thread_status: ThreadStatus,
-    pub distributed_tokens: u128,
-    pub graph_rep: Vec<(String, Vec<String>)>
+    pub distributed_tokens: u64,
+    pub graph_rep: Vec<(PostId, Vec<PostId>)>,
 }
 
-#[derive(Encode, Decode, TypeInfo, PartialEq, Eq, Clone, Debug)]
+#[derive(Encode, Decode, TypeInfo)]
+#[codec(crate = gstd::codec)]
+#[scale_info(crate = gstd::scale_info)]
 pub struct IoThreadReply {
-    pub id: String,
-    pub owner: ActorId,
-    pub title: String,
-    pub content: String,
-    pub photo_url: String,
-    pub likes: u128,
-    pub reports: u128,
-    pub like_history: Vec<(ActorId, u128)>
+    pub post_data: Post,
+    pub likes: u64,
+    pub reports: u64,
+    pub like_history: Vec<(ActorId, u64)>,
 }
 
-pub struct ContractMetadata;
+impl From<IoThreadReply> for ThreadReply {
+    fn from(io_reply: IoThreadReply) -> Self {
+        let like_history: GHashMap<ActorId, u64> = io_reply
+            .like_history
+            .into_iter()
+            .map(|(actor_id, likes)| (actor_id, likes))
+            .collect();
 
-impl Metadata for ContractMetadata {
-    type Init = In<InitFT>;
-    type Handle = InOut<ThreadAction,ThreadEvent>;
-    type Reply = ();
-    type Others = ();
-    type Signal = ();
-    type State = IoThreads;
+        ThreadReply {
+            post_data: io_reply.post_data,
+            reports: io_reply.reports,
+            like_history,
+            likes: io_reply.likes,
+        }
+    }
+}
+
+impl From<ThreadReply> for IoThreadReply {
+    fn from(thread_reply: ThreadReply) -> Self {
+        let like_history: Vec<(ActorId, u64)> = thread_reply
+            .like_history
+            .into_iter()
+            .map(|(actor_id, likes)| (actor_id, likes))
+            .collect();
+
+        IoThreadReply {
+            post_data: thread_reply.post_data,
+            likes: thread_reply.likes,
+            reports: thread_reply.reports,
+            like_history,
+        }
+    }
+}
+
+impl From<IoThread> for Thread {
+    fn from(io_thread: IoThread) -> Self {
+        let graph_rep: collections::HashMap<PostId, Vec<PostId>> =
+            io_thread.graph_rep.into_iter().collect();
+        let replies: collections::HashMap<PostId, ThreadReply> = io_thread
+            .replies
+            .into_iter()
+            .map(|(id, reply)| (id, reply.into()))
+            .collect();
+
+        Thread {
+            post_data: io_thread.post_data,
+            thread_status: io_thread.thread_status,
+            distributed_tokens: io_thread.distributed_tokens,
+            graph_rep,
+            replies,
+        }
+    }
+}
+
+impl From<Thread> for IoThread {
+    fn from(thread: Thread) -> Self {
+        let graph_rep: Vec<(PostId, Vec<PostId>)> = thread
+            .graph_rep
+            .into_iter()
+            .map(|(post_id, post_ids)| (post_id, post_ids))
+            .collect();
+
+        let replies: Vec<(PostId, IoThreadReply)> = thread
+            .replies
+            .into_iter()
+            .map(|(post_id, reply)| (post_id, reply.into()))
+            .collect();
+
+        IoThread {
+            post_data: thread.post_data,
+            replies,
+            thread_status: thread.thread_status,
+            distributed_tokens: thread.distributed_tokens,
+            graph_rep,
+        }
+    }
 }
