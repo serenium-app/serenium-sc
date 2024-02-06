@@ -30,7 +30,7 @@ async fn main() {
         ThreadLogicAction::AddAddressRewardLogic(address) => {
             thread_logic.address_reward_logic = Some(address);
         }
-        ThreadLogicAction::NewThread(_post_data) => {}
+        ThreadLogicAction::NewThread(init_thread) => thread_logic.new_thread(init_thread).await,
         ThreadLogicAction::AddReply(_post_data) => {}
         ThreadLogicAction::EndThread(_post_id) => {}
         ThreadLogicAction::LikeReply(_post_id, _like_count) => {}

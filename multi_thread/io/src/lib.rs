@@ -1,9 +1,10 @@
 #![no_std]
 
-use gstd::{collections::HashMap as GHashMap, prelude::*, ActorId};
+use gstd::{collections::HashMap as GHashMap, exec, msg, prelude::*, ActorId};
 
-pub type PostId = String;
+pub type PostId = u32;
 pub type Timestamp = u64;
+pub type URL = String;
 
 #[derive(Encode, Decode, TypeInfo)]
 #[codec(crate = gstd::codec)]
@@ -14,12 +15,40 @@ pub struct Post {
     pub owner: ActorId,
     pub title: String,
     pub content: String,
+    pub photo_url: Option<URL>,
+}
+
+impl Post {
+    pub fn new(title: String, content: String, photo_url: String) -> Self {
+        Post {
+            post_id: exec::block_height(),
+            posted_at: exec::block_timestamp(),
+            owner: msg::source(),
+            title,
+            content,
+            photo_url: if photo_url.is_empty() {
+                None
+            } else {
+                Some(photo_url)
+            },
+        }
+    }
+}
+
+#[derive(Encode, Decode, TypeInfo)]
+#[codec(crate = gstd::codec)]
+#[scale_info(crate = gstd::scale_info)]
+pub struct InitThread {
+    pub title: String,
+    pub content: String,
     pub photo_url: String,
+    pub thread_type: ThreadType,
 }
 
 pub struct Thread {
     pub post_data: Post,
     pub thread_status: ThreadStatus,
+    pub thread_type: ThreadType,
     pub distributed_tokens: u64,
     pub graph_rep: GHashMap<PostId, Vec<PostId>>,
     pub replies: GHashMap<PostId, ThreadReply>,
@@ -32,11 +61,10 @@ pub struct ThreadReply {
     pub likes: u64,
 }
 
-#[derive(Default, Encode, Decode, TypeInfo)]
+#[derive(Encode, Decode, TypeInfo)]
 #[codec(crate = gstd::codec)]
 #[scale_info(crate = gstd::scale_info)]
 pub enum ThreadType {
-    #[default]
     Challenge,
     Question,
 }
@@ -71,6 +99,7 @@ pub struct IoThread {
     pub post_data: Post,
     pub replies: Vec<(PostId, IoThreadReply)>,
     pub thread_status: ThreadStatus,
+    pub thread_type: ThreadType,
     pub distributed_tokens: u64,
     pub graph_rep: Vec<(PostId, Vec<PostId>)>,
 }
@@ -132,6 +161,7 @@ impl From<IoThread> for Thread {
         Thread {
             post_data: io_thread.post_data,
             thread_status: io_thread.thread_status,
+            thread_type: io_thread.thread_type,
             distributed_tokens: io_thread.distributed_tokens,
             graph_rep,
             replies,
@@ -157,6 +187,7 @@ impl From<Thread> for IoThread {
             post_data: thread.post_data,
             replies,
             thread_status: thread.thread_status,
+            thread_type: thread.thread_type,
             distributed_tokens: thread.distributed_tokens,
             graph_rep,
         }

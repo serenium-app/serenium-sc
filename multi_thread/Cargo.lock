@@ -2238,6 +2238,7 @@ dependencies = [
  "gmeta",
  "gstd",
  "io",
+ "storage-io",
 ]
 
 [[package]]
