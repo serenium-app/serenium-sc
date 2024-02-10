@@ -2,7 +2,7 @@
 
 use gmeta::{InOut, Metadata, Out};
 use gstd::{msg, prelude::*, ActorId};
-use io::{InitThread, Post, PostId, Thread};
+use io::{InitReply, InitThread, Post, PostId, Thread, ThreadReply};
 use storage_io::{StorageAction, StorageEvent};
 
 #[derive(Default, Encode, Decode, TypeInfo)]
@@ -31,6 +31,7 @@ impl ThreadLogic {
             init_thread.content,
             init_thread.photo_url,
         );
+
         let thread = Thread {
             post_data: post,
             thread_status: Default::default(),
@@ -39,23 +40,73 @@ impl ThreadLogic {
             graph_rep: Default::default(),
             replies: Default::default(),
         };
+
         let res = msg::send_for_reply_as::<_, StorageEvent>(
-            self.address_storage.unwrap(),
+            self.address_storage.expect(""),
             StorageAction::PushThread(thread.into()),
             0,
             0,
         )
         .expect("")
         .await;
+
         match res {
-            Ok(StorageEvent::ThreadPush(post_id)) => msg::reply(
-                ThreadLogicEvent::NewThreadCreated {
+            Ok(StorageEvent::ThreadPush(_post_id)) => {
+                msg::reply(ThreadLogicEvent::NewThreadCreated, 0).expect("")
+            }
+            Ok(StorageEvent::StorageError) | Err(_) | _ => {
+                msg::reply(ThreadLogicEvent::LogicError, 0).expect("")
+            }
+        };
+    }
+
+    pub async fn add_reply(&mut self, init_reply: InitReply) {
+        let post = Post::new(init_reply.title, init_reply.content, init_reply.photo_url);
+
+        let reply = ThreadReply {
+            post_data: post,
+            reports: 0,
+            like_history: Default::default(),
+            likes: 0,
+        };
+
+        let res = msg::send_for_reply_as::<_, StorageEvent>(
+            self.address_storage.expect(""),
+            StorageAction::PushReply(reply.post_data.post_id, reply.into()),
+            0,
+            0,
+        )
+        .expect("")
+        .await;
+
+        match res {
+            Ok(StorageEvent::ReplyPush(post_id)) => msg::reply(
+                ThreadLogicEvent::ReplyAdded {
                     by: msg::source(),
                     id: post_id,
+                    on_thread: 0,
                 },
                 0,
             )
             .expect(""),
+            Ok(StorageEvent::StorageError) | Err(_) | _ => {
+                msg::reply(ThreadLogicEvent::LogicError, 0).expect("")
+            }
+        };
+    }
+
+    pub async fn like_reply(&mut self, thread_id: PostId, reply_id: PostId, like_count: u64) {
+        let res = msg::send_for_reply_as::<_, StorageEvent>(
+            self.address_storage.expect(""),
+            StorageAction::LikeReply(thread_id, reply_id, like_count),
+            0,
+            0,
+        )
+        .expect("")
+        .await;
+
+        match res {
+            Ok(StorageEvent::ReplyLiked) => msg::reply(ThreadLogicEvent::ReplyLiked, 0).expect(""),
             Ok(StorageEvent::StorageError) | Err(_) | _ => {
                 msg::reply(ThreadLogicEvent::LogicError, 0).expect("")
             }
@@ -72,7 +123,7 @@ pub enum ThreadLogicAction {
     AddAddressRewardLogic(ActorId),
     NewThread(InitThread),
     EndThread(PostId),
-    AddReply(Post),
+    AddReply(InitReply),
     LikeReply(PostId, u64),
 }
 
@@ -83,21 +134,14 @@ pub enum ThreadLogicEvent {
     FTAddressAdded {
         address: ActorId,
     },
-    NewThreadCreated {
-        by: ActorId,
-        id: PostId,
-    },
+    StorageAddressAdded(ActorId),
+    NewThreadCreated,
     ReplyAdded {
         by: ActorId,
         id: PostId,
         on_thread: PostId,
     },
-    ReplyLiked {
-        by: ActorId,
-        like_count: u128,
-        on_reply: PostId,
-        on_thread: PostId,
-    },
+    ReplyLiked,
     LogicError,
 }
 
