@@ -1,7 +1,7 @@
 #![no_std]
 
 use gstd::{async_main, msg};
-use logic_io::{ThreadLogic, ThreadLogicAction};
+use logic_io::{ThreadLogic, ThreadLogicAction, ThreadLogicEvent};
 
 static mut THREAD_LOGIC: Option<ThreadLogic> = None;
 
@@ -14,6 +14,8 @@ extern fn init() {
     let thread_logic = ThreadLogic::new();
 
     unsafe { THREAD_LOGIC = Some(thread_logic) }
+
+    thread_logic_mut().admin = Some(msg::source());
 }
 
 #[async_main]
@@ -26,12 +28,13 @@ async fn main() {
         }
         ThreadLogicAction::AddAddressStorage(address) => {
             thread_logic.address_storage = Some(address);
+            msg::reply(ThreadLogicEvent::StorageAddressAdded(address), 0).expect("");
         }
         ThreadLogicAction::AddAddressRewardLogic(address) => {
             thread_logic.address_reward_logic = Some(address);
         }
         ThreadLogicAction::NewThread(init_thread) => thread_logic.new_thread(init_thread).await,
-        ThreadLogicAction::AddReply(_post_data) => {}
+        ThreadLogicAction::AddReply(init_reply) => thread_logic.add_reply(init_reply).await,
         ThreadLogicAction::EndThread(_post_id) => {}
         ThreadLogicAction::LikeReply(_post_id, _like_count) => {}
     }
