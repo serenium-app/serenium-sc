@@ -131,10 +131,9 @@ pub enum ThreadLogicAction {
 #[codec(crate = gstd::codec)]
 #[scale_info(crate = gstd::scale_info)]
 pub enum ThreadLogicEvent {
-    FTAddressAdded {
-        address: ActorId,
-    },
-    StorageAddressAdded(ActorId),
+    FTAddressAdded,
+    StorageAddressAdded,
+    RewardLogicAddressAdded,
     NewThreadCreated,
     ReplyAdded {
         by: ActorId,
