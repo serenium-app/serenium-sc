@@ -1,12 +1,13 @@
 #![no_std]
 
-use gmeta::{In, InOut, Metadata, Out};
+use gmeta::{InOut, Metadata, Out};
 use gstd::{collections::HashMap as GHashMap, prelude::*, ActorId};
 use io::{IoThread, IoThreadReply, PostId, Thread, ThreadReply};
 
 #[derive(Default)]
 pub struct ThreadStorage {
     pub threads: GHashMap<PostId, Thread>,
+    pub admin: Option<ActorId>,
     pub address_logic_contract: Option<ActorId>,
 }
 
@@ -14,6 +15,7 @@ impl ThreadStorage {
     pub fn new() -> Self {
         ThreadStorage {
             threads: GHashMap::new(),
+            admin: None,
             address_logic_contract: None,
         }
     }
@@ -48,6 +50,7 @@ impl ThreadStorage {
 #[scale_info(crate = gstd::scale_info)]
 pub struct IoThreadStorage {
     pub threads: Vec<(PostId, IoThread)>,
+    pub admin: Option<ActorId>,
     pub address_logic_contract: Option<ActorId>,
 }
 
@@ -82,6 +85,7 @@ impl From<ThreadStorage> for IoThreadStorage {
 
         IoThreadStorage {
             threads,
+            admin: thread_storage.admin,
             address_logic_contract: thread_storage.address_logic_contract,
         }
     }
@@ -89,7 +93,7 @@ impl From<ThreadStorage> for IoThreadStorage {
 pub struct ContractMetadata;
 
 impl Metadata for ContractMetadata {
-    type Init = In<ActorId>;
+    type Init = ();
     type Handle = InOut<StorageAction, StorageEvent>;
     type Reply = ();
     type Others = ();
