@@ -14,6 +14,8 @@ extern fn init() {
     let thread_storage = ThreadStorage::new();
 
     unsafe { THREAD_STORAGE = Some(thread_storage) }
+
+    thread_storage_mut().admin = Some(msg::source());
 }
 
 #[no_mangle]
@@ -23,6 +25,9 @@ extern fn handle() {
 
     match action {
         StorageAction::AddLogicContractAddress(address) => {
+            if thread_storage.admin.expect("") != msg::source() {
+                panic!("AddLogicContractAddress action can only be called by admin")
+            }
             thread_storage.add_logic_contract_address(address)
         }
         StorageAction::PushThread(thread) => thread_storage.push_thread(thread.into()),
