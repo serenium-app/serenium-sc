@@ -24,18 +24,41 @@ async fn main() {
     let thread_logic = thread_logic_mut();
     match action {
         ThreadLogicAction::AddAddressFT(address) => {
+            if thread_logic.admin.expect("") != msg::source() {
+                panic!("Add Address FT Action can only be called by admin")
+            }
             thread_logic.address_ft = Some(address);
+            msg::reply(ThreadLogicEvent::FTAddressAdded, 0).expect("");
         }
         ThreadLogicAction::AddAddressStorage(address) => {
+            if thread_logic.admin.expect("") != msg::source() {
+                panic!("Add Address Storage Action can only be called by admin")
+            }
             thread_logic.address_storage = Some(address);
-            msg::reply(ThreadLogicEvent::StorageAddressAdded(address), 0).expect("");
+            msg::reply(ThreadLogicEvent::StorageAddressAdded, 0).expect("");
         }
         ThreadLogicAction::AddAddressRewardLogic(address) => {
+            if thread_logic.admin.expect("") != msg::source() {
+                panic!("Add Address Reward Logic Action can only be called by admin")
+            }
             thread_logic.address_reward_logic = Some(address);
+            msg::reply(ThreadLogicEvent::RewardLogicAddressAdded, 0).expect("");
         }
         ThreadLogicAction::NewThread(init_thread) => thread_logic.new_thread(init_thread).await,
         ThreadLogicAction::AddReply(init_reply) => thread_logic.add_reply(init_reply).await,
         ThreadLogicAction::EndThread(_post_id) => {}
         ThreadLogicAction::LikeReply(_post_id, _like_count) => {}
     }
+}
+
+#[no_mangle]
+extern fn state() {
+    let thread_logic = unsafe {
+        THREAD_LOGIC
+            .take()
+            .expect("Unexpected error in taking state")
+    };
+    msg::reply::<ThreadLogic>(thread_logic, 0).expect(
+        "Failed to encode or reply with `<ContractMetadata as Metadata>::State` from `state()`",
+    );
 }
