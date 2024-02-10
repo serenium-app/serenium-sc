@@ -49,6 +49,7 @@ pub enum StorageAction {
 #[scale_info(crate = gstd::scale_info)]
 pub enum StorageEvent {
     LogicContractAddressAdded,
+    StorageError,
     ThreadPush(PostId),
 }
 
