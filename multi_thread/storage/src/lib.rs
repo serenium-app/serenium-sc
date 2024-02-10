@@ -26,6 +26,12 @@ extern fn handle() {
             thread_storage.add_logic_contract_address(address)
         }
         StorageAction::PushThread(thread) => thread_storage.push_thread(thread.into()),
+        StorageAction::PushReply(post_id, reply) => {
+            thread_storage.push_reply(post_id, reply.into())
+        }
+        StorageAction::LikeReply(thread_id, reply_id, like_count) => {
+            thread_storage.like_reply(thread_id, reply_id, like_count)
+        }
     }
 }
 
