@@ -32,12 +32,12 @@ extern fn handle() {
             msg::reply(StorageEvent::LogicContractAddressAdded, 0).expect("Failed to reply to AddLogicContractAddress Action");
         }
         StorageAction::PushThread(thread) => {
-            let thread_id = thread.post_data.post_id.clone();
+            let thread_id = thread.post_data.post_id;
             thread_storage.push_thread(thread.into());
             msg::reply(StorageEvent::ThreadPush(thread_id), 0).expect("Failed to reply to PushThread Action");
         },
         StorageAction::PushReply(thread_id, reply) => {
-            let reply_id = reply.post_data.post_id.clone();
+            let reply_id = reply.post_data.post_id;
             thread_storage.push_reply(thread_id, reply.into());
             msg::reply(StorageEvent::ReplyPush(reply_id), 0).expect("Failed to reply to PushReply Action");
         }

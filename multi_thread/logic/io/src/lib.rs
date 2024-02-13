@@ -54,7 +54,7 @@ impl ThreadLogic {
             Ok(StorageEvent::ThreadPush(_post_id)) => {
                 msg::reply(ThreadLogicEvent::NewThreadCreated, 0).expect("")
             }
-            Ok(StorageEvent::StorageError) | Err(_) | _ => {
+            Ok(StorageEvent::StorageError) | Ok(StorageEvent::LogicContractAddressAdded) | Ok(StorageEvent::ReplyPush(_)) | Ok(StorageEvent::ReplyLiked) | Err(_) => {
                 msg::reply(ThreadLogicEvent::LogicError, 0).expect("")
             }
         };
@@ -89,7 +89,7 @@ impl ThreadLogic {
                 0,
             )
             .expect(""),
-            Ok(StorageEvent::StorageError) | Err(_) | _ => {
+            Ok(StorageEvent::StorageError) | Err(_) | Ok(StorageEvent::ReplyLiked) | Ok(StorageEvent::LogicContractAddressAdded) | Ok(StorageEvent::ThreadPush(_)) => {
                 msg::reply(ThreadLogicEvent::LogicError, 0).expect("")
             }
         };
@@ -107,7 +107,7 @@ impl ThreadLogic {
 
         match res {
             Ok(StorageEvent::ReplyLiked) => msg::reply(ThreadLogicEvent::ReplyLiked, 0).expect(""),
-            Ok(StorageEvent::StorageError) | Err(_) | _ => {
+            Ok(StorageEvent::StorageError) | Ok(StorageEvent::LogicContractAddressAdded) | Ok(StorageEvent::ReplyPush(_)) | Ok(StorageEvent::ThreadPush(_)) | Err(_) => {
                 msg::reply(ThreadLogicEvent::LogicError, 0).expect("")
             }
         };
