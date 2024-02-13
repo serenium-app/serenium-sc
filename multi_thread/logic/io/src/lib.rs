@@ -124,7 +124,7 @@ pub enum ThreadLogicAction {
     NewThread(InitThread),
     EndThread(PostId),
     AddReply(InitReply),
-    LikeReply(PostId, u64),
+    LikeReply(PostId, PostId, u64),
 }
 
 #[derive(Encode, Decode, TypeInfo)]

@@ -22,22 +22,23 @@ impl ThreadStorage {
 
     pub fn push_thread(&mut self, thread: Thread) {
         self.threads
-            .insert(thread.post_data.post_id.clone(), thread);
+            .insert(thread.post_data.post_id, thread);
     }
 
     pub fn push_reply(&mut self, thread_id: PostId, reply: ThreadReply) {
         if let Some(thread) = self.threads.get_mut(&thread_id) {
             thread
                 .replies
-                .insert(reply.post_data.post_id.clone(), reply);
+                .insert(reply.post_data.post_id, reply);
         }
     }
 
     pub fn like_reply(&mut self, thread_id: PostId, reply_id: PostId, like_count: u64) {
-        self.threads
-            .get_mut(&thread_id)
-            .and_then(|thread| thread.replies.get_mut(&reply_id))
-            .map(|reply| reply.likes += like_count);
+        if let Some(thread) = self.threads.get_mut(&thread_id) {
+            if let Some(reply) = thread.replies.get_mut(&reply_id) {
+                reply.likes += like_count;
+            }
+        }        
     }
 
     pub fn add_logic_contract_address(&mut self, address: ActorId) {
