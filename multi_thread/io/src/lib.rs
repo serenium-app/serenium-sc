@@ -45,6 +45,15 @@ pub struct InitThread {
     pub thread_type: ThreadType,
 }
 
+#[derive(Encode, Decode, TypeInfo)]
+#[codec(crate = gstd::codec)]
+#[scale_info(crate = gstd::scale_info)]
+pub struct InitReply {
+    pub title: String,
+    pub content: String,
+    pub photo_url: String,
+}
+
 pub struct Thread {
     pub post_data: Post,
     pub thread_status: ThreadStatus,
