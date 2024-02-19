@@ -1,0 +1,29 @@
+name: Contracts CI
+
+on:
+  pull_request:
+    paths-ignore: frontend/**
+  push:
+    branches: [main]
+    paths-ignore: frontend/**
+
+env:
+  CARGO_TERM_COLOR: always
+
+defaults:
+  run:
+    working-directory: contracts
+
+jobs:
+  all:
+    name: All
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: CI
+        run: |
+          cargo fmt --all --check
+          cargo clippy --all-targets -- -Dwarnings
+          cargo t

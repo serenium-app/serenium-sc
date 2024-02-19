@@ -1,7 +1,7 @@
 #![no_std]
 
 use gstd::{msg, prelude::*};
-use storage_io::{IoThreadStorage, StorageAction, ThreadStorage};
+use storage_io::{IoThreadStorage, StorageAction, StorageEvent, ThreadStorage};
 
 static mut THREAD_STORAGE: Option<ThreadStorage> = None;
 
@@ -14,6 +14,8 @@ extern fn init() {
     let thread_storage = ThreadStorage::new();
 
     unsafe { THREAD_STORAGE = Some(thread_storage) }
+
+    thread_storage_mut().admin = Some(msg::source());
 }
 
 #[no_mangle]
@@ -23,9 +25,26 @@ extern fn handle() {
 
     match action {
         StorageAction::AddLogicContractAddress(address) => {
-            thread_storage.add_logic_contract_address(address)
+            if thread_storage.admin.expect("") != msg::source() {
+                panic!("AddLogicContractAddress action can only be called by admin")
+            }
+            thread_storage.add_logic_contract_address(address);
+            msg::reply(StorageEvent::LogicContractAddressAdded, 0).expect("Failed to reply to AddLogicContractAddress Action");
         }
-        StorageAction::PushThread(thread) => thread_storage.push_thread(thread.into()),
+        StorageAction::PushThread(thread) => {
+            let thread_id = thread.post_data.post_id;
+            thread_storage.push_thread(thread.into());
+            msg::reply(StorageEvent::ThreadPush(thread_id), 0).expect("Failed to reply to PushThread Action");
+        },
+        StorageAction::PushReply(thread_id, reply) => {
+            let reply_id = reply.post_data.post_id;
+            thread_storage.push_reply(thread_id, reply.into());
+            msg::reply(StorageEvent::ReplyPush(reply_id), 0).expect("Failed to reply to PushReply Action");
+        }
+        StorageAction::LikeReply(thread_id, reply_id, like_count) => {
+            thread_storage.like_reply(thread_id, reply_id, like_count);
+            msg::reply(StorageEvent::ReplyLiked, 0).expect("Failed to reply to LikeReply Action");
+        }
     }
 }
 
