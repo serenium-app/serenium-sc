@@ -12,7 +12,7 @@ env:
 
 defaults:
   run:
-    working-directory: contracts
+    working-directory: ${{ github.workspace }}
 
 jobs:
   all:
