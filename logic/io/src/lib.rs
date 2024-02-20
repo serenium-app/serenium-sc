@@ -54,9 +54,12 @@ impl ThreadLogic {
             Ok(StorageEvent::ThreadPush(_post_id)) => {
                 msg::reply(ThreadLogicEvent::NewThreadCreated, 0).expect("")
             }
-            Ok(StorageEvent::StorageError) | Ok(StorageEvent::LogicContractAddressAdded) | Ok(StorageEvent::ReplyPush(_)) | Ok(StorageEvent::ReplyLiked) | Err(_) => {
-                msg::reply(ThreadLogicEvent::LogicError, 0).expect("")
-            }
+            Ok(StorageEvent::StorageError)
+            | Ok(StorageEvent::LogicContractAddressAdded)
+            | Ok(StorageEvent::ReplyPush(_))
+            | Ok(StorageEvent::ReplyLiked)
+            | Ok(StorageEvent::StatusStateChanged)
+            | Err(_) => msg::reply(ThreadLogicEvent::LogicError, 0).expect(""),
         };
     }
 
@@ -89,7 +92,12 @@ impl ThreadLogic {
                 0,
             )
             .expect(""),
-            Ok(StorageEvent::StorageError) | Err(_) | Ok(StorageEvent::ReplyLiked) | Ok(StorageEvent::LogicContractAddressAdded) | Ok(StorageEvent::ThreadPush(_)) => {
+            Ok(StorageEvent::StorageError)
+            | Err(_)
+            | Ok(StorageEvent::ReplyLiked)
+            | Ok(StorageEvent::LogicContractAddressAdded)
+            | Ok(StorageEvent::ThreadPush(_))
+            | Ok(StorageEvent::StatusStateChanged) => {
                 msg::reply(ThreadLogicEvent::LogicError, 0).expect("")
             }
         };
@@ -107,10 +115,28 @@ impl ThreadLogic {
 
         match res {
             Ok(StorageEvent::ReplyLiked) => msg::reply(ThreadLogicEvent::ReplyLiked, 0).expect(""),
-            Ok(StorageEvent::StorageError) | Ok(StorageEvent::LogicContractAddressAdded) | Ok(StorageEvent::ReplyPush(_)) | Ok(StorageEvent::ThreadPush(_)) | Err(_) => {
-                msg::reply(ThreadLogicEvent::LogicError, 0).expect("")
-            }
+            Ok(StorageEvent::StorageError)
+            | Ok(StorageEvent::LogicContractAddressAdded)
+            | Ok(StorageEvent::ReplyPush(_))
+            | Ok(StorageEvent::StatusStateChanged)
+            | Ok(StorageEvent::ThreadPush(_))
+            | Err(_) => msg::reply(ThreadLogicEvent::LogicError, 0).expect(""),
         };
+    }
+
+    pub async fn expire_thread(&mut self, thread_id: PostId) {
+        // TODO: Send msg to reward logic contract to trigger reward calculations and FT transfers
+
+        // Only when reward logic has been successful, change state
+        // TODO: Send msg to storage contract to change state
+        let res = msg::send_for_reply_as::<_, StorageEvent>(
+            self.address_storage.expect(""),
+            StorageAction::ChangeStatusState(thread_id),
+            0,
+            0,
+        )
+        .expect("")
+        .await;
     }
 }
 
@@ -125,6 +151,7 @@ pub enum ThreadLogicAction {
     EndThread(PostId),
     AddReply(InitReply),
     LikeReply(PostId, PostId, u64),
+    ExpireThread(PostId),
 }
 
 #[derive(Encode, Decode, TypeInfo)]
