@@ -47,7 +47,11 @@ async fn main() {
         ThreadLogicAction::NewThread(init_thread) => thread_logic.new_thread(init_thread).await,
         ThreadLogicAction::AddReply(init_reply) => thread_logic.add_reply(init_reply).await,
         ThreadLogicAction::EndThread(_post_id) => {}
-        ThreadLogicAction::LikeReply(thread_id, reply_id, like_count) => thread_logic.like_reply(thread_id, reply_id, like_count).await,
+        ThreadLogicAction::LikeReply(thread_id, reply_id, like_count) => {
+            thread_logic
+                .like_reply(thread_id, reply_id, like_count)
+                .await
+        }
         ThreadLogicAction::ExpireThread(thread_id) => thread_logic.expire_thread(thread_id),
     }
 }
