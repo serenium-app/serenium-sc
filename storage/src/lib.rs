@@ -29,17 +29,20 @@ extern fn handle() {
                 panic!("AddLogicContractAddress action can only be called by admin")
             }
             thread_storage.add_logic_contract_address(address);
-            msg::reply(StorageEvent::LogicContractAddressAdded, 0).expect("Failed to reply to AddLogicContractAddress Action");
+            msg::reply(StorageEvent::LogicContractAddressAdded, 0)
+                .expect("Failed to reply to AddLogicContractAddress Action");
         }
         StorageAction::PushThread(thread) => {
             let thread_id = thread.post_data.post_id;
             thread_storage.push_thread(thread.into());
-            msg::reply(StorageEvent::ThreadPush(thread_id), 0).expect("Failed to reply to PushThread Action");
-        },
+            msg::reply(StorageEvent::ThreadPush(thread_id), 0)
+                .expect("Failed to reply to PushThread Action");
+        }
         StorageAction::PushReply(thread_id, reply) => {
             let reply_id = reply.post_data.post_id;
             thread_storage.push_reply(thread_id, reply.into());
-            msg::reply(StorageEvent::ReplyPush(reply_id), 0).expect("Failed to reply to PushReply Action");
+            msg::reply(StorageEvent::ReplyPush(reply_id), 0)
+                .expect("Failed to reply to PushReply Action");
         }
         StorageAction::LikeReply(thread_id, reply_id, like_count) => {
             thread_storage.like_reply(thread_id, reply_id, like_count);
@@ -47,7 +50,8 @@ extern fn handle() {
         }
         StorageAction::ChangeStatusState(thread_id) => {
             thread_storage.change_status_thread(thread_id);
-            msg::reply(StorageEvent::StatusStateChanged, 0).expect("Failed to reply to ChangeStatusState Action");
+            msg::reply(StorageEvent::StatusStateChanged, 0)
+                .expect("Failed to reply to ChangeStatusState Action");
         }
     }
 }
