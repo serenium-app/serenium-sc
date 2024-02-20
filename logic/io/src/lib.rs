@@ -129,7 +129,7 @@ impl ThreadLogic {
 
         // Only when reward logic has been successful, change state
         // TODO: Send msg to storage contract to change state
-        let res = msg::send_for_reply_as::<_, StorageEvent>(
+        let _res = msg::send_for_reply_as::<_, StorageEvent>(
             self.address_storage.expect(""),
             StorageAction::ChangeStatusState(thread_id),
             0,
