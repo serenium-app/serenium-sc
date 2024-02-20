@@ -52,7 +52,7 @@ async fn main() {
                 .like_reply(thread_id, reply_id, like_count)
                 .await
         }
-        ThreadLogicAction::ExpireThread(thread_id) => thread_logic.expire_thread(thread_id),
+        ThreadLogicAction::ExpireThread(thread_id) => thread_logic.expire_thread(thread_id).await,
     }
 }
 
