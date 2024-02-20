@@ -2,7 +2,7 @@
 
 use gmeta::{InOut, Metadata, Out};
 use gstd::{collections::HashMap as GHashMap, prelude::*, ActorId};
-use io::{IoThread, IoThreadReply, PostId, Thread, ThreadReply};
+use io::{IoThread, IoThreadReply, PostId, Thread, ThreadReply, ThreadStatus};
 
 #[derive(Default)]
 pub struct ThreadStorage {
@@ -41,6 +41,12 @@ impl ThreadStorage {
         }        
     }
 
+    pub fn change_status_thread(&mut self, thread_id: PostId) {
+        if let Some(thread) = self.threads.get_mut(&thread_id) {
+            thread.thread_status = ThreadStatus::Expired;
+        }
+    }
+
     pub fn add_logic_contract_address(&mut self, address: ActorId) {
         self.address_logic_contract = Some(address);
     }
@@ -63,6 +69,7 @@ pub enum StorageAction {
     PushThread(IoThread),
     PushReply(PostId, IoThreadReply),
     LikeReply(PostId, PostId, u64),
+    ChangeStatusState(PostId)
 }
 
 #[derive(Encode, Decode, TypeInfo)]
@@ -74,6 +81,7 @@ pub enum StorageEvent {
     ThreadPush(PostId),
     ReplyPush(PostId),
     ReplyLiked,
+    StatusStateChanged,
 }
 
 impl From<ThreadStorage> for IoThreadStorage {

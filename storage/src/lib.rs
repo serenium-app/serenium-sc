@@ -45,6 +45,10 @@ extern fn handle() {
             thread_storage.like_reply(thread_id, reply_id, like_count);
             msg::reply(StorageEvent::ReplyLiked, 0).expect("Failed to reply to LikeReply Action");
         }
+        StorageAction::ChangeStatusState(thread_id) => {
+            thread_storage.change_status_thread(thread_id);
+            msg::reply(StorageEvent::StatusStateChanged, 0).expect("Failed to reply to ChangeStatusState Action");
+        }
     }
 }
 
