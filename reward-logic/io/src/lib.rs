@@ -52,15 +52,10 @@ impl RewardLogicThread {
         self.expired_thread_data = Some(expired_thread_data);
     }
     pub fn find_winner_reply(&mut self) -> Option<PostId> {
-        if let Some(reply) = self
-            .replies
+        self.replies
             .values()
             .max_by_key(|thread_reply| thread_reply.likes)
-        {
-            Some(reply.post_data.post_id)
-        } else {
-            None
-        }
+            .map(|reply| reply.post_data.post_id)
     }
     pub fn find_top_liker_winner(&mut self) {}
     pub fn find_path_winners(&mut self) {}
