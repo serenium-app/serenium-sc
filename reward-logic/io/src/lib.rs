@@ -23,6 +23,10 @@ impl RewardLogic {
     pub fn trigger_reward_logic(thread: Thread) {
         let mut reward_logic_thread = RewardLogicThread::new(thread);
         reward_logic_thread.set_expired_thread_data();
+        reward_logic_thread
+            .expired_thread_data
+            .expect("")
+            .winner_reply = reward_logic_thread.find_winner_reply();
     }
 }
 
@@ -47,13 +51,21 @@ impl RewardLogicThread {
         let expired_thread_data = ExpiredThread::new();
         self.expired_thread_data = Some(expired_thread_data);
     }
+    pub fn find_winner_reply(&mut self) -> Option<PostId> {
+        self.replies
+            .values()
+            .max_by_key(|thread_reply| thread_reply.likes)
+            .map(|reply| reply.post_data.post_id)
+    }
+    pub fn find_top_liker_winner(&mut self) {}
+    pub fn find_path_winners(&mut self) {}
 }
 
 pub struct ExpiredThread {
     pub top_liker_winner: Option<ActorId>,
     pub path_winners: Option<Vec<ActorId>>,
     pub transaction_log: Option<Vec<(ActorId, u64)>>,
-    pub winner_reply: Option<ThreadReply>,
+    pub winner_reply: Option<PostId>,
 }
 
 impl ExpiredThread {
@@ -65,9 +77,6 @@ impl ExpiredThread {
             winner_reply: None,
         }
     }
-    pub fn find_winner_reply(&mut self) {}
-    pub fn find_top_liker_winner(&mut self) {}
-    pub fn find_path_winners(&mut self) {}
 }
 
 impl Default for ExpiredThread {
