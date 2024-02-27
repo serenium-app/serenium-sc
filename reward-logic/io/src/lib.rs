@@ -35,10 +35,17 @@ impl RewardLogic {
             .as_mut()
             .expect("")
             .top_liker_winner = reward_logic_thread.find_top_liker_winner();
+
+        reward_logic_thread
+            .expired_thread_data
+            .as_mut()
+            .expect("")
+            .path_winners = reward_logic_thread.find_path_winners_actors();
     }
 }
 
 pub struct RewardLogicThread {
+    pub thread_id: Option<PostId>,
     pub distributed_tokens: u64,
     pub graph_rep: GHashMap<PostId, Vec<PostId>>,
     pub replies: GHashMap<PostId, ThreadReply>,
@@ -48,6 +55,7 @@ pub struct RewardLogicThread {
 impl RewardLogicThread {
     pub fn new(thread: Thread) -> Self {
         RewardLogicThread {
+            thread_id: None,
             distributed_tokens: thread.distributed_tokens,
             graph_rep: thread.graph_rep,
             replies: thread.replies,
@@ -97,7 +105,78 @@ impl RewardLogicThread {
                 })
             })
     }
-    pub fn find_path_winners(&mut self) {}
+
+    /// Finds a path from the start node to the winner reply node in the graph.
+    ///
+    /// Returns:
+    /// - `Some(Vec<PostId>)`: A vector representing the path from the start node to the winner reply node,
+    ///                          where each element is a PostId.
+    /// - `None`: If no path is found from the start node to the winner reply node.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if:
+    /// - `thread_id` is None, indicating that the start node is not set.
+    /// - `expired_thread_data` is None, indicating that the winner reply node is not set.
+    /// - `winner_reply` within `expired_thread_data` is None, indicating that the winner reply node is not set.
+    ///
+    /// ```
+    pub fn find_path_winners(&mut self) -> Option<Vec<PostId>> {
+        let start = self.thread_id.expect("Thread ID is not set.");
+        let target = self
+            .expired_thread_data
+            .as_ref()
+            .expect("Expired thread data is not set.")
+            .winner_reply
+            .expect("Winner reply is not set.");
+        let mut visited = collections::HashSet::new();
+        let mut queue = collections::VecDeque::new();
+        let mut path = GHashMap::new();
+
+        queue.push_back(start);
+        visited.insert(start);
+
+        while let Some(node) = queue.pop_front() {
+            if node == target {
+                // Reconstruct path
+                let mut current = node;
+                let mut result = Vec::new();
+                while let Some(&prev) = path.get(&current) {
+                    result.push(current);
+                    current = prev;
+                }
+                result.push(start);
+                result.reverse();
+                return Some(result);
+            }
+
+            if let Some(neighbors) = self.graph_rep.get(&node) {
+                for &neighbor in neighbors {
+                    if visited.insert(neighbor) {
+                        queue.push_back(neighbor);
+                        path.insert(neighbor, node);
+                    }
+                }
+            }
+        }
+
+        None
+    }
+
+    /// Finds a path from the start node to the winner reply node in the graph and retrieves the owners of the posts in the path.
+    ///
+    /// Returns:
+    /// - `Some(Vec<ActorId>)`: A vector representing the owners of the posts along the path from the start node to the winner reply node,
+    ///                           where each element is an ActorId.
+    /// - `None`: If no path is found from the start node to the winner reply node.
+    pub fn find_path_winners_actors(&mut self) -> Option<Vec<ActorId>> {
+        self.find_path_winners().map(|path_winners_post_id| {
+            path_winners_post_id
+                .iter()
+                .map(|&post_id| self.replies.get(&post_id).unwrap().post_data.owner)
+                .collect()
+        })
+    }
 }
 
 pub struct ExpiredThread {
