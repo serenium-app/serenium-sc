@@ -23,10 +23,18 @@ impl RewardLogic {
     pub fn trigger_reward_logic(thread: Thread) {
         let mut reward_logic_thread = RewardLogicThread::new(thread);
         reward_logic_thread.set_expired_thread_data();
+
         reward_logic_thread
             .expired_thread_data
+            .as_mut()
             .expect("")
             .winner_reply = reward_logic_thread.find_winner_reply();
+
+        reward_logic_thread
+            .expired_thread_data
+            .as_mut()
+            .expect("")
+            .top_liker_winner = reward_logic_thread.find_top_liker_winner();
     }
 }
 
@@ -57,7 +65,38 @@ impl RewardLogicThread {
             .max_by_key(|thread_reply| thread_reply.likes)
             .map(|reply| reply.post_data.post_id)
     }
-    pub fn find_top_liker_winner(&mut self) {}
+
+    /// Finds the top liker winner based on the `like_history` of the winner's reply.
+    ///
+    /// This method retrieves the winner reply from `expired_thread_data`, then finds the entry in
+    /// `self.replies` corresponding to the winner reply. It then iterates over the `like_history`
+    /// associated with the winner reply to find the key (ActorId) corresponding to the entry with
+    /// the highest value. If such an entry exists, it returns `Some(ActorId)` representing the key
+    /// of the top liker winner. If `expired_thread_data` is not present, or if the winner reply is
+    /// not available, or if the `like_history` is empty, it returns `None`.
+    ///
+    /// # Returns
+    ///
+    /// - `Some(ActorId)`: The key corresponding to the entry with the highest value in the
+    ///   `like_history` of the winner's reply, if found.
+    /// - `None`: If `expired_thread_data` is not present, or if the winner reply is not available,
+    ///   or if the `like_history` is empty.
+    pub fn find_top_liker_winner(&mut self) -> Option<ActorId> {
+        self.expired_thread_data
+            .as_ref()
+            .and_then(|expired_thread_data| {
+                expired_thread_data.winner_reply.and_then(|winner_reply| {
+                    self.replies
+                        .get_mut(&winner_reply)
+                        .expect("")
+                        .like_history
+                        .iter()
+                        .max_by_key(|&(_, v)| *v)
+                        .map(|(k, _)| k)
+                        .cloned()
+                })
+            })
+    }
     pub fn find_path_winners(&mut self) {}
 }
 
