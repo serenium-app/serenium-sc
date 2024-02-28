@@ -53,6 +53,11 @@ extern fn handle() {
             msg::reply(StorageEvent::StatusStateChanged, 0)
                 .expect("Failed to reply to ChangeStatusState Action");
         }
+        StorageAction::RemoveThread(post_id) => {
+            thread_storage.remove_thread(post_id);
+            msg::reply(StorageEvent::ThreadRemoved, 0)
+                .expect("Failed to reply to RemoveThread Action");
+        }
     }
 }
 
