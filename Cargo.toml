@@ -6,7 +6,7 @@ edition = "2021"
 
 [workspace]
 resolver = "2"
-members = ["storage", "logic", "reward-logic"]
+members = ["storage", "storage/state","logic", "reward-logic"]
 
 [workspace.dependencies]
 gclient = { git = "https://github.com/gear-tech/gear", tag = "v1.0.2" }
@@ -16,6 +16,11 @@ gmeta = { git = "https://github.com/gear-tech/gear", tag = "v1.0.2" }
 gsdk = { git = "https://github.com/gear-tech/gear", tag = "v1.0.2" }
 gstd = { git = "https://github.com/gear-tech/gear", tag = "v1.0.2" }
 gtest = { git = "https://github.com/gear-tech/gear", tag = "v1.0.2" }
+
+# Local states
+storage-state.path = "storage/state"
+
+# Local IO-crates
 
 io.path = "io"
 storage-io.path = "storage/io"
