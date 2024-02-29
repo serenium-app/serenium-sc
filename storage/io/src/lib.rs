@@ -1,7 +1,7 @@
 #![no_std]
 // Test
 use gmeta::{InOut, Metadata, Out};
-use gstd::{collections::HashMap as GHashMap, prelude::*, ActorId};
+use gstd::{collections::HashMap as GHashMap, msg, prelude::*, ActorId};
 use io::{IoThread, IoThreadReply, PostId, Thread, ThreadReply, ThreadStatus};
 
 #[derive(Default)]
@@ -47,6 +47,13 @@ impl ThreadStorage {
     pub fn add_logic_contract_address(&mut self, address: ActorId) {
         self.address_logic_contract = Some(address);
     }
+
+    pub fn remove_thread(&mut self, post_id: PostId) {
+        if msg::source() != self.admin.expect("") {
+            panic!("Thread may only be removed by admin")
+        }
+        self.threads.remove(&post_id);
+    }
 }
 
 #[derive(Default, Encode, Decode, TypeInfo)]
@@ -67,6 +74,7 @@ pub enum StorageAction {
     PushReply(PostId, IoThreadReply),
     LikeReply(PostId, PostId, u64),
     ChangeStatusState(PostId),
+    RemoveThread(PostId),
 }
 
 #[derive(Encode, Decode, TypeInfo)]
@@ -79,6 +87,7 @@ pub enum StorageEvent {
     ReplyPush(PostId),
     ReplyLiked,
     StatusStateChanged,
+    ThreadRemoved,
 }
 
 impl From<ThreadStorage> for IoThreadStorage {
