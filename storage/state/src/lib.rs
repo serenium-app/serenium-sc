@@ -41,8 +41,16 @@ pub mod metafns {
         None
     }
 
-    pub fn graph_rep(_state: State) -> Option<Vec<(PostId, Vec<PostId>)>> {
-        None
+    pub fn graph_rep(state: State, target_post_id: PostId) -> Option<Vec<(PostId, Vec<PostId>)>> {
+        if let Some((_, io_thread)) = state
+            .threads
+            .iter()
+            .find(|(post_id, _)| *post_id == target_post_id)
+        {
+            Some(io_thread.graph_rep.clone())
+        } else {
+            None
+        }
     }
 
     pub fn like_history(_state: State) -> Option<Vec<(ActorId, u64)>> {
