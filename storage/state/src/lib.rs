@@ -13,8 +13,16 @@ pub mod metafns {
         None
     }
 
-    pub fn distributed_tokens(_state: State) -> Option<u64> {
-        None
+    pub fn distributed_tokens(state: State, target_post_id: PostId) -> Option<u64> {
+        if let Some((_, io_thread)) = state
+            .threads
+            .iter()
+            .find(|(post_id, _)| *post_id == target_post_id)
+        {
+            Some(io_thread.distributed_tokens)
+        } else {
+            None
+        }
     }
 
     pub fn thread_status(state: State, target_post_id: PostId) -> Option<ThreadStatus> {
