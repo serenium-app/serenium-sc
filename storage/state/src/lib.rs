@@ -17,8 +17,16 @@ pub mod metafns {
         None
     }
 
-    pub fn thread_status(_state: State) -> Option<ThreadStatus> {
-        None
+    pub fn thread_status(state: State, target_post_id: PostId) -> Option<ThreadStatus> {
+        if let Some((_, io_thread)) = state
+            .threads
+            .iter()
+            .find(|(post_id, _)| *post_id == target_post_id)
+        {
+            Some(io_thread.thread_status.clone())
+        } else {
+            None
+        }
     }
 
     pub fn all_threads(_state: State) -> Option<IoThreads> {
