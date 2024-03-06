@@ -84,7 +84,11 @@ pub mod metafns {
             .map(|(_, io_reply)| io_reply.like_history.clone())
     }
 
-    pub fn thread_by_post_id(_state: State, _target_post_id: PostId) -> Option<IoThread> {
-        None
+    pub fn thread_by_post_id(state: State, target_post_id: PostId) -> Option<IoThread> {
+        state
+            .threads
+            .iter()
+            .find(|(thread_id, _)| *thread_id == target_post_id)
+            .map(|(_, io_thread)| io_thread.clone())
     }
 }
