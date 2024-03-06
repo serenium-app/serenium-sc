@@ -53,8 +53,35 @@ pub mod metafns {
         }
     }
 
-    pub fn like_history(_state: State) -> Option<Vec<(ActorId, u64)>> {
-        None
+    /// Retrieves the like history associated with a target reply within a target thread in the given state.
+    ///
+    /// # Arguments
+    ///
+    /// * `state` - The state containing threads and replies.
+    /// * `target_post_id` - The ID of the target post (thread) where the reply is located.
+    /// * `target_reply_id` - The ID of the target reply for which the like history is sought.
+    ///
+    /// # Returns
+    ///
+    /// * `Some(Vec<(ActorId, u64)>)` - If the target post and reply are found, returns the like history of the reply.
+    /// * `None` - If either the target post or reply is not found.
+    ///
+    pub fn like_history(
+        state: State,
+        target_post_id: PostId,
+        target_reply_id: PostId,
+    ) -> Option<Vec<(ActorId, u64)>> {
+        state
+            .threads
+            .iter()
+            .find(|(thread_id, _)| *thread_id == target_post_id)
+            .and_then(|(_, io_thread)| {
+                io_thread
+                    .replies
+                    .iter()
+                    .find(|(reply_id, _)| *reply_id == target_reply_id)
+            })
+            .map(|(_, io_reply)| io_reply.like_history.clone())
     }
 
     pub fn thread_by_post_id(_state: State, _target_post_id: PostId) -> Option<IoThread> {
