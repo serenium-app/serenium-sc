@@ -6,7 +6,7 @@ pub type PostId = u32;
 pub type Timestamp = u64;
 pub type URL = String;
 
-#[derive(Encode, Decode, TypeInfo)]
+#[derive(Encode, Decode, TypeInfo, Clone)]
 #[codec(crate = gstd::codec)]
 #[scale_info(crate = gstd::scale_info)]
 pub struct Post {
@@ -70,7 +70,7 @@ pub struct ThreadReply {
     pub likes: u64,
 }
 
-#[derive(Encode, Decode, TypeInfo)]
+#[derive(Encode, Decode, TypeInfo, Clone)]
 #[codec(crate = gstd::codec)]
 #[scale_info(crate = gstd::scale_info)]
 pub enum ThreadType {
@@ -101,7 +101,7 @@ pub struct IoThreads {
     pub threads: Vec<(PostId, IoThread)>,
 }
 
-#[derive(Encode, Decode, TypeInfo)]
+#[derive(Encode, Decode, TypeInfo, Clone)]
 #[codec(crate = gstd::codec)]
 #[scale_info(crate = gstd::scale_info)]
 pub struct IoThread {
@@ -113,7 +113,7 @@ pub struct IoThread {
     pub graph_rep: Vec<(PostId, Vec<PostId>)>,
 }
 
-#[derive(Encode, Decode, TypeInfo)]
+#[derive(Encode, Decode, TypeInfo, Clone)]
 #[codec(crate = gstd::codec)]
 #[scale_info(crate = gstd::scale_info)]
 pub struct IoThreadReply {
