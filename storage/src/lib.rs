@@ -58,6 +58,11 @@ extern fn handle() {
             msg::reply(StorageEvent::ThreadRemoved, 0)
                 .expect("Failed to reply to RemoveThread Action");
         }
+        StorageAction::RemoveReply(thread_id, reply_id) => {
+            thread_storage.remove_reply(thread_id, reply_id);
+            msg::reply(StorageEvent::ReplyRemoved, 0)
+                .expect("Failed to reply to RemoveReply Action");
+        }
     }
 }
 

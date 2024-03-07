@@ -60,6 +60,7 @@ impl ThreadLogic {
             | Ok(StorageEvent::ReplyLiked)
             | Ok(StorageEvent::StatusStateChanged)
             | Ok(StorageEvent::ThreadRemoved)
+            | Ok(StorageEvent::ReplyRemoved)
             | Err(_) => msg::reply(ThreadLogicEvent::LogicError, 0).expect(""),
         };
     }
@@ -99,6 +100,7 @@ impl ThreadLogic {
             | Ok(StorageEvent::LogicContractAddressAdded)
             | Ok(StorageEvent::ThreadPush(_))
             | Ok(StorageEvent::ThreadRemoved)
+            | Ok(StorageEvent::ReplyRemoved)
             | Ok(StorageEvent::StatusStateChanged) => {
                 msg::reply(ThreadLogicEvent::LogicError, 0).expect("")
             }
@@ -123,6 +125,7 @@ impl ThreadLogic {
             | Ok(StorageEvent::StatusStateChanged)
             | Ok(StorageEvent::ThreadPush(_))
             | Ok(StorageEvent::ThreadRemoved)
+            | Ok(StorageEvent::ReplyRemoved)
             | Err(_) => msg::reply(ThreadLogicEvent::LogicError, 0).expect(""),
         };
     }
