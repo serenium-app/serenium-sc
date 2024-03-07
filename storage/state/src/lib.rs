@@ -1,5 +1,7 @@
 #![no_std]
 
+extern crate alloc;
+
 use gmeta::metawasm;
 use gstd::{prelude::*, ActorId};
 use io::*;
@@ -37,8 +39,22 @@ pub mod metafns {
         }
     }
 
-    pub fn all_threads(_state: State) -> Option<IoThreads> {
-        None
+    /// Retrieves all threads from the given state and converts them into `TinyThread` instances.
+    ///
+    /// # Arguments
+    ///
+    /// * `state` - The state containing the threads.
+    ///
+    /// # Returns
+    ///
+    /// A vector of `TinyThread` instances containing all threads from the state.
+    pub fn all_threads(state: State) -> Vec<TinyThread> {
+        // Extracts all threads from the state and converts them into TinyThread instances
+        state
+            .threads
+            .into_iter()
+            .map(|(_, io_thread)| TinyThread::from(io_thread))
+            .collect()
     }
 
     pub fn graph_rep(state: State, target_post_id: PostId) -> Option<Vec<(PostId, Vec<PostId>)>> {
