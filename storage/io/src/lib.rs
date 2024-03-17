@@ -2,7 +2,9 @@
 // Test
 use gmeta::{InOut, Metadata, Out};
 use gstd::{collections::HashMap as GHashMap, msg, prelude::*, ActorId};
-use io::{IoThread, IoThreadReply, PostId, Thread, ThreadReply, ThreadStatus};
+use io::{IoThread, IoThreadReply, Post, PostId, Thread, ThreadReply, ThreadStatus, ThreadType};
+
+pub type TinyReply = Post;
 
 #[derive(Default)]
 pub struct ThreadStorage {
@@ -63,6 +65,15 @@ impl ThreadStorage {
             .get_mut(&thread_id)
             .and_then(|thread| thread.replies.remove(&reply_id));
     }
+
+    pub fn get_featured_reply(&mut self, thread_id: PostId) -> Option<&ThreadReply> {
+        self.threads.get_mut(&thread_id).and_then(|thread| {
+            thread
+                .replies
+                .values()
+                .min_by_key(|thread_reply| thread_reply.likes)
+        })
+    }
 }
 
 #[derive(Default, Encode, Decode, TypeInfo)]
@@ -72,6 +83,17 @@ pub struct IoThreadStorage {
     pub threads: Vec<(PostId, IoThread)>,
     pub admin: Option<ActorId>,
     pub address_logic_contract: Option<ActorId>,
+}
+
+/// Represents a tiny thread, for sending the state to the client, when it asks for all threads.
+#[derive(Encode, Decode, TypeInfo)]
+#[codec(crate = gstd::codec)]
+#[scale_info(crate = gstd::scale_info)]
+pub struct TinyThread {
+    pub post_data: Post,
+    pub thread_status: ThreadStatus,
+    pub thread_type: ThreadType,
+    pub featured_reply: Option<TinyReply>,
 }
 
 #[derive(Encode, Decode, TypeInfo)]
@@ -116,6 +138,31 @@ impl From<ThreadStorage> for IoThreadStorage {
         }
     }
 }
+
+impl From<IoThread> for TinyThread {
+    fn from(io_thread: IoThread) -> Self {
+        let featured_reply = io_thread
+            .replies
+            .into_iter()
+            .min_by_key(|(_, reply)| reply.likes)
+            .map(|(post_id, reply)| TinyReply {
+                post_id,
+                posted_at: reply.post_data.posted_at,
+                owner: reply.post_data.owner,
+                title: reply.post_data.title,
+                content: reply.post_data.content,
+                photo_url: reply.post_data.photo_url,
+            });
+
+        TinyThread {
+            post_data: io_thread.post_data,
+            thread_status: io_thread.thread_status,
+            thread_type: io_thread.thread_type,
+            featured_reply,
+        }
+    }
+}
+
 pub struct ContractMetadata;
 
 impl Metadata for ContractMetadata {
