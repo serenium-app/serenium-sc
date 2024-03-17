@@ -49,10 +49,19 @@ impl ThreadStorage {
     }
 
     pub fn remove_thread(&mut self, post_id: PostId) {
-        if msg::source() != self.admin.expect("") {
+        if msg::source() != self.admin.expect("Unable to retrieve admin ActorId") {
             panic!("Thread may only be removed by admin")
         }
         self.threads.remove(&post_id);
+    }
+
+    pub fn remove_reply(&mut self, thread_id: PostId, reply_id: PostId) {
+        if msg::source() != self.admin.expect("Unable to retrieve admin ActorId") {
+            panic!("Reply may only be removed by admin")
+        }
+        self.threads
+            .get_mut(&thread_id)
+            .and_then(|thread| thread.replies.remove(&reply_id));
     }
 }
 
@@ -75,6 +84,7 @@ pub enum StorageAction {
     LikeReply(PostId, PostId, u64),
     ChangeStatusState(PostId),
     RemoveThread(PostId),
+    RemoveReply(PostId, PostId),
 }
 
 #[derive(Encode, Decode, TypeInfo)]
@@ -88,6 +98,7 @@ pub enum StorageEvent {
     ReplyLiked,
     StatusStateChanged,
     ThreadRemoved,
+    ReplyRemoved,
 }
 
 impl From<ThreadStorage> for IoThreadStorage {
