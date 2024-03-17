@@ -2,7 +2,8 @@
 
 use gmeta::{InOut, Metadata, Out};
 use gstd::{msg, prelude::*, ActorId};
-use io::{InitReply, InitThread, Post, PostId, Thread, ThreadReply};
+use io::{InitReply, InitThread, IoThread, Post, PostId, Thread, ThreadReply};
+use reward_logic_io::{RewardLogicAction, RewardLogicEvent};
 use storage_io::{StorageAction, StorageEvent};
 
 #[derive(Default, Encode, Decode, TypeInfo)]
@@ -130,12 +131,29 @@ impl ThreadLogic {
         };
     }
 
-    pub async fn expire_thread(&mut self, thread_id: PostId) {
-        // TODO: Send msg to reward logic contract to trigger reward calculations and FT transfers
+    pub async fn get_storage_thread(&mut self, _thread_id: PostId) {}
 
-        // Only when reward logic has been successful, change state
-        // TODO: Send msg to storage contract to change state
-        let _res = msg::send_for_reply_as::<_, StorageEvent>(
+    pub async fn send_trigger_reward_msg(&mut self, thread: IoThread) -> Result<(), ()> {
+        let reward_res = msg::send_for_reply_as::<_, RewardLogicEvent>(
+            self.address_reward_logic.expect(""),
+            RewardLogicAction::TriggerRewardLogic(thread),
+            0,
+            0,
+        )
+        .expect("")
+        .await;
+
+        match reward_res {
+            Ok(event) => match event {
+                RewardLogicEvent::RewardLogicTriggered => Ok(()),
+                _ => Err(()),
+            },
+            Err(_) => Err(()),
+        }
+    }
+
+    pub async fn send_thread_status_expired_msg(&mut self, thread_id: PostId) -> Result<(), ()> {
+        let res = msg::send_for_reply_as::<_, StorageEvent>(
             self.address_storage.expect(""),
             StorageAction::ChangeStatusState(thread_id),
             0,
@@ -143,6 +161,26 @@ impl ThreadLogic {
         )
         .expect("")
         .await;
+
+        match res {
+            Ok(event) => match event {
+                StorageEvent::StatusStateChanged => Ok(()),
+                _ => Err(()),
+            },
+            Err(_) => Err(()),
+        }
+    }
+
+    pub async fn expire_thread(&mut self, _thread_id: PostId) {
+        // TODO: Send a message to storage contract to get the thread
+        // Function get_storage_thread
+
+        // TODO: Send msg to reward logic contract to trigger reward calculations and FT transfers
+        // Function send_trigger_reward_msg
+
+        // Only when reward logic has been successful, change state
+        // TODO: Send msg to storage contract to change state
+        // Function send_thread_status_expired_msg
     }
 }
 
