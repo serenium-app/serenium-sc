@@ -30,6 +30,7 @@ async fn main() {
             thread_logic.address_ft = Some(address);
             msg::reply(ThreadLogicEvent::FTAddressAdded, 0).expect("");
         }
+
         ThreadLogicAction::AddAddressStorage(address) => {
             if thread_logic.admin.expect("") != msg::source() {
                 panic!("Add Address Storage Action can only be called by admin")
@@ -37,6 +38,7 @@ async fn main() {
             thread_logic.address_storage = Some(address);
             msg::reply(ThreadLogicEvent::StorageAddressAdded, 0).expect("");
         }
+
         ThreadLogicAction::AddAddressRewardLogic(address) => {
             if thread_logic.admin.expect("") != msg::source() {
                 panic!("Add Address Reward Logic Action can only be called by admin")
@@ -44,14 +46,17 @@ async fn main() {
             thread_logic.address_reward_logic = Some(address);
             msg::reply(ThreadLogicEvent::RewardLogicAddressAdded, 0).expect("");
         }
+
         ThreadLogicAction::NewThread(init_thread) => thread_logic.new_thread(init_thread).await,
+
         ThreadLogicAction::AddReply(init_reply) => thread_logic.add_reply(init_reply).await,
-        ThreadLogicAction::EndThread(_post_id) => {}
+
         ThreadLogicAction::LikeReply(thread_id, reply_id, like_count) => {
             thread_logic
                 .like_reply(thread_id, reply_id, like_count)
                 .await
         }
+
         ThreadLogicAction::ExpireThread(thread_id) => thread_logic.expire_thread(thread_id).await,
     }
 }
