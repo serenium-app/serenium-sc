@@ -2239,6 +2239,7 @@ dependencies = [
  "gtest",
  "io",
  "logic-io",
+ "reward-logic-io",
 ]
 
 [[package]]
@@ -2249,6 +2250,7 @@ dependencies = [
  "gmeta",
  "gstd",
  "io",
+ "reward-logic-io",
  "storage-io",
 ]
 

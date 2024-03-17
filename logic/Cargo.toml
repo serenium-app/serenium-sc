@@ -8,6 +8,7 @@ edition.workspace = true
 [dependencies]
 io.workspace = true
 logic-io.workspace = true
+reward-logic-io.workspace = true
 gstd.workspace = true
 gmeta.workspace = true
 
