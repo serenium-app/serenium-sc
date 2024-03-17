@@ -1,7 +1,7 @@
 #![no_std]
 
 use gstd::{async_main, msg};
-use reward_logic_io::{RewardLogic, RewardLogicAction};
+use reward_logic_io::{RewardLogic, RewardLogicAction, RewardLogicEvent};
 
 static mut REWARD_LOGIC: Option<RewardLogic> = None;
 
@@ -14,14 +14,34 @@ extern fn init() {
     let reward_logic = RewardLogic::new();
 
     unsafe { REWARD_LOGIC = Some(reward_logic) }
+
+    reward_logic_mut().admin = Some(msg::source());
 }
 
 #[async_main]
 async fn main() {
     let action: RewardLogicAction = msg::load().expect("");
-    let _reward_logic = reward_logic_mut();
+    let reward_logic = reward_logic_mut();
     match action {
-        RewardLogicAction::TriggerRewardLogic(_thread) => {}
+        RewardLogicAction::AddAddressFT(address) => {
+            if reward_logic.admin.expect("") != msg::source() {
+                panic!("Add Address FT Action can only be called by admin")
+            }
+            reward_logic.address_ft = Some(address);
+            msg::reply(RewardLogicEvent::FTAddressAdded, 0).expect("");
+        }
+
+        RewardLogicAction::AddAddressLogic(address) => {
+            if reward_logic.admin.expect("") != msg::source() {
+                panic!("Add Address Logic Action can only be called by admin")
+            }
+            reward_logic.address_logic = Some(address);
+            msg::reply(RewardLogicEvent::LogicAddressAdded, 0).expect("");
+        }
+
+        RewardLogicAction::TriggerRewardLogic(thread) => {
+            RewardLogic::trigger_reward_logic(thread.into())
+        }
     }
 }
 

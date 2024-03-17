@@ -8,17 +8,20 @@ use io::{IoThread, PostId, Thread, ThreadReply};
 #[codec(crate = gstd::codec)]
 #[scale_info(crate = gstd::scale_info)]
 pub struct RewardLogic {
-    pub address_ft_contract: Option<ActorId>,
-    pub address_logic_contract: Option<ActorId>,
+    pub admin: Option<ActorId>,
+    pub address_ft: Option<ActorId>,
+    pub address_logic: Option<ActorId>,
 }
 
 impl RewardLogic {
     pub fn new() -> Self {
         RewardLogic {
-            address_ft_contract: None,
-            address_logic_contract: None,
+            admin: None,
+            address_ft: None,
+            address_logic: None,
         }
     }
+    pub fn add_address_ft(_address_ft: ActorId) {}
     pub fn transfer_tokens_reward(_amount_tokens: u64, _dest: ActorId) {}
     pub fn trigger_reward_logic(thread: Thread) {
         let mut reward_logic_thread = RewardLogicThread::new(thread);
@@ -207,6 +210,8 @@ impl Default for ExpiredThread {
 #[codec(crate = gstd::codec)]
 #[scale_info(crate = gstd::scale_info)]
 pub enum RewardLogicAction {
+    AddAddressFT(ActorId),
+    AddAddressLogic(ActorId),
     TriggerRewardLogic(IoThread),
 }
 
@@ -214,6 +219,8 @@ pub enum RewardLogicAction {
 #[codec(crate = gstd::codec)]
 #[scale_info(crate = gstd::scale_info)]
 pub enum RewardLogicEvent {
+    FTAddressAdded,
+    LogicAddressAdded,
     RewardLogicTriggered,
 }
 
