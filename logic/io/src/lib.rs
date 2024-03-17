@@ -51,17 +51,13 @@ impl ThreadLogic {
         .await;
 
         match res {
-            Ok(StorageEvent::ThreadPush(_post_id)) => {
-                msg::reply(ThreadLogicEvent::NewThreadCreated, 0).expect("")
-            }
-            Ok(StorageEvent::StorageError)
-            | Ok(StorageEvent::LogicContractAddressAdded)
-            | Ok(StorageEvent::ReplyPush(_))
-            | Ok(StorageEvent::ReplyLiked)
-            | Ok(StorageEvent::StatusStateChanged)
-            | Ok(StorageEvent::ThreadRemoved)
-            | Ok(StorageEvent::ReplyRemoved)
-            | Err(_) => msg::reply(ThreadLogicEvent::LogicError, 0).expect(""),
+            Ok(event) => match event {
+                StorageEvent::ThreadPush(_) => {
+                    msg::reply(ThreadLogicEvent::NewThreadCreated, 0).expect("")
+                }
+                _ => msg::reply(ThreadLogicEvent::LogicError, 0).expect(""),
+            },
+            Err(_) => msg::reply(ThreadLogicEvent::LogicError, 0).expect(""),
         };
     }
 
@@ -85,25 +81,13 @@ impl ThreadLogic {
         .await;
 
         match res {
-            Ok(StorageEvent::ReplyPush(post_id)) => msg::reply(
-                ThreadLogicEvent::ReplyAdded {
-                    by: msg::source(),
-                    id: post_id,
-                    on_thread: 0,
-                },
-                0,
-            )
-            .expect(""),
-            Ok(StorageEvent::StorageError)
-            | Err(_)
-            | Ok(StorageEvent::ReplyLiked)
-            | Ok(StorageEvent::LogicContractAddressAdded)
-            | Ok(StorageEvent::ThreadPush(_))
-            | Ok(StorageEvent::ThreadRemoved)
-            | Ok(StorageEvent::ReplyRemoved)
-            | Ok(StorageEvent::StatusStateChanged) => {
-                msg::reply(ThreadLogicEvent::LogicError, 0).expect("")
-            }
+            Ok(event) => match event {
+                StorageEvent::ReplyPush(_) => {
+                    msg::reply(ThreadLogicEvent::ReplyAdded, 0).expect("")
+                }
+                _ => msg::reply(ThreadLogicEvent::LogicError, 0).expect(""),
+            },
+            Err(_) => msg::reply(ThreadLogicEvent::LogicError, 0).expect(""),
         };
     }
 
@@ -118,15 +102,11 @@ impl ThreadLogic {
         .await;
 
         match res {
-            Ok(StorageEvent::ReplyLiked) => msg::reply(ThreadLogicEvent::ReplyLiked, 0).expect(""),
-            Ok(StorageEvent::StorageError)
-            | Ok(StorageEvent::LogicContractAddressAdded)
-            | Ok(StorageEvent::ReplyPush(_))
-            | Ok(StorageEvent::StatusStateChanged)
-            | Ok(StorageEvent::ThreadPush(_))
-            | Ok(StorageEvent::ThreadRemoved)
-            | Ok(StorageEvent::ReplyRemoved)
-            | Err(_) => msg::reply(ThreadLogicEvent::LogicError, 0).expect(""),
+            Ok(event) => match event {
+                StorageEvent::ReplyLiked => msg::reply(ThreadLogicEvent::ReplyLiked, 0).expect(""),
+                _ => msg::reply(ThreadLogicEvent::LogicError, 0).expect(""),
+            },
+            Err(_) => msg::reply(ThreadLogicEvent::LogicError, 0).expect(""),
         };
     }
 
@@ -167,11 +147,7 @@ pub enum ThreadLogicEvent {
     StorageAddressAdded,
     RewardLogicAddressAdded,
     NewThreadCreated,
-    ReplyAdded {
-        by: ActorId,
-        id: PostId,
-        on_thread: PostId,
-    },
+    ReplyAdded,
     ReplyLiked,
     LogicError,
 }
