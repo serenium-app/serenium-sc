@@ -151,7 +151,6 @@ pub enum ThreadLogicAction {
     AddAddressStorage(ActorId),
     AddAddressRewardLogic(ActorId),
     NewThread(InitThread),
-    EndThread(PostId),
     AddReply(InitReply),
     LikeReply(PostId, PostId, u64),
     ExpireThread(PostId),
