@@ -6,7 +6,7 @@ edition = "2021"
 
 [workspace]
 resolver = "2"
-members = ["storage", "storage/state","logic", "reward-logic"]
+members = ["storage", "storage/state", "logic", "reward-logic"]
 
 [workspace.dependencies]
 gclient = { git = "https://github.com/gear-tech/gear", tag = "v1.0.2" }
@@ -30,6 +30,4 @@ reward-logic-io.path = "reward-logic/io"
 tokio = "1"
 
 # External binaries
-sharded-fungible-token = { git = "https://github.com/gear-foundation/dapps", tag = "v1.0.2" }
-sharded-fungible-token-logic = { git = "https://github.com/gear-foundation/dapps", tag = "v1.0.2" }
-sharded-fungible-token-storage = { git = "https://github.com/gear-foundation/dapps", tag = "v1.0.2" }
+sharded-fungible-token-io = { git = "https://github.com/gear-foundation/dapps", tag = "v1.0.2" }

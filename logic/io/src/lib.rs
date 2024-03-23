@@ -4,6 +4,7 @@ use gmeta::{InOut, Metadata, Out};
 use gstd::{msg, prelude::*, ActorId};
 use io::{InitReply, InitThread, IoThread, Post, PostId, Thread, ThreadReply};
 use reward_logic_io::{RewardLogicAction, RewardLogicEvent};
+use sharded_fungible_token_io::{FTokenEvent, LogicAction};
 use storage_io::{StorageAction, StorageEvent};
 
 #[derive(Default, Encode, Decode, TypeInfo)]
@@ -26,6 +27,28 @@ impl ThreadLogic {
         }
     }
 
+    pub async fn mint_tokens(&mut self, amount: u128) -> Result<(), ()> {
+        let res = msg::send_for_reply_as::<_, FTokenEvent>(
+            self.address_ft.expect(""),
+            LogicAction::Mint {
+                recipient: self.address_storage.unwrap(),
+                amount,
+            },
+            0,
+            0,
+        )
+        .expect("")
+        .await;
+
+        match res {
+            Ok(event) => match event {
+                FTokenEvent::Ok => Ok(()),
+                _ => Err(()),
+            },
+            Err(_) => Err(()),
+        }
+    }
+
     pub async fn new_thread(&mut self, init_thread: InitThread) {
         let post = Post::new(
             init_thread.title,
@@ -41,6 +64,8 @@ impl ThreadLogic {
             graph_rep: Default::default(),
             replies: Default::default(),
         };
+
+        self.mint_tokens(1).await.expect("");
 
         let res = msg::send_for_reply_as::<_, StorageEvent>(
             self.address_storage.expect(""),

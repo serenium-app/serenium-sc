@@ -11,6 +11,7 @@ gmeta.workspace = true
 io.workspace = true
 storage-io.workspace = true
 reward-logic-io.workspace = true
+sharded-fungible-token-io.workspace = true
 
 [build-dependencies]
 gear-wasm-builder.workspace = true

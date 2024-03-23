@@ -2251,6 +2251,7 @@ dependencies = [
  "gstd",
  "io",
  "reward-logic-io",
+ "sharded-fungible-token-io",
  "storage-io",
 ]
 
@@ -3375,6 +3376,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "sharded-fungible-token-io"
+version = "1.0.2"
+source = "git+https://github.com/gear-foundation/dapps?tag=v1.0.2#32e1f4d84636f5f27005ea2cf66b1eb5ed124dec"
+dependencies = [
+ "gmeta",
+ "gstd",
+ "primitive-types",
+]
+
+[[package]]
 name = "sharded-slab"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4231,7 +4242,7 @@ checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
  "cfg-if",
  "digest 0.10.7",
- "rand 0.8.5",
+ "rand 0.7.3",
  "static_assertions",
 ]
 
