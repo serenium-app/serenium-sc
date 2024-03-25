@@ -3042,6 +3042,7 @@ dependencies = [
  "gmeta",
  "gstd",
  "io",
+ "sharded-fungible-token-io",
 ]
 
 [[package]]

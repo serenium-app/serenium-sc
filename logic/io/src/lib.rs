@@ -49,6 +49,35 @@ impl ThreadLogic {
         }
     }
 
+    pub async fn transfer_tokens(
+        &mut self,
+        ft_address_id: ActorId,
+        amount: u128,
+        sender: ActorId,
+        recipient: ActorId,
+    ) -> Result<(), ()> {
+        let res = msg::send_for_reply_as::<_, FTokenEvent>(
+            ft_address_id,
+            LogicAction::Transfer {
+                sender,
+                recipient,
+                amount,
+            },
+            0,
+            0,
+        )
+        .expect("")
+        .await;
+
+        match res {
+            Ok(event) => match event {
+                FTokenEvent::Ok => Ok(()),
+                _ => Err(()),
+            },
+            Err(_) => Err(()),
+        }
+    }
+
     pub async fn new_thread(&mut self, init_thread: InitThread) {
         let post = Post::new(
             init_thread.title,
@@ -97,6 +126,15 @@ impl ThreadLogic {
             likes: 0,
         };
 
+        self.transfer_tokens(
+            self.address_ft.unwrap(),
+            1,
+            msg::source(),
+            self.address_storage.unwrap(),
+        )
+        .await
+        .expect("");
+
         let res = msg::send_for_reply_as::<_, StorageEvent>(
             self.address_storage.expect(""),
             StorageAction::PushReply(reply.post_data.post_id, reply.into()),
@@ -117,7 +155,16 @@ impl ThreadLogic {
         };
     }
 
-    pub async fn like_reply(&mut self, thread_id: PostId, reply_id: PostId, like_count: u64) {
+    pub async fn like_reply(&mut self, thread_id: PostId, reply_id: PostId, like_count: u128) {
+        self.transfer_tokens(
+            self.address_ft.unwrap(),
+            like_count,
+            msg::source(),
+            self.address_storage.unwrap(),
+        )
+        .await
+        .expect("");
+
         let res = msg::send_for_reply_as::<_, StorageEvent>(
             self.address_storage.expect(""),
             StorageAction::LikeReply(thread_id, reply_id, like_count),
@@ -135,8 +182,6 @@ impl ThreadLogic {
             Err(_) => msg::reply(ThreadLogicEvent::LogicError, 0).expect(""),
         };
     }
-
-    pub async fn get_storage_thread(&mut self, _thread_id: PostId) {}
 
     pub async fn send_trigger_reward_msg(&mut self, thread: IoThread) -> Result<(), ()> {
         let reward_res = msg::send_for_reply_as::<_, RewardLogicEvent>(
@@ -177,9 +222,6 @@ impl ThreadLogic {
     }
 
     pub async fn expire_thread(&mut self, _thread_id: PostId) {
-        // TODO: Send a message to storage contract to get the thread
-        // Function get_storage_thread
-
         // TODO: Send msg to reward logic contract to trigger reward calculations and FT transfers
         // Function send_trigger_reward_msg
 
@@ -198,7 +240,7 @@ pub enum ThreadLogicAction {
     AddAddressRewardLogic(ActorId),
     NewThread(InitThread),
     AddReply(InitReply),
-    LikeReply(PostId, PostId, u64),
+    LikeReply(PostId, PostId, u128),
     ExpireThread(PostId),
 }
 
