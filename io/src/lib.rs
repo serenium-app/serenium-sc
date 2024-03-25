@@ -58,7 +58,7 @@ pub struct Thread {
     pub post_data: Post,
     pub thread_status: ThreadStatus,
     pub thread_type: ThreadType,
-    pub distributed_tokens: u64,
+    pub distributed_tokens: u128,
     pub graph_rep: GHashMap<PostId, Vec<PostId>>,
     pub replies: GHashMap<PostId, ThreadReply>,
 }
@@ -66,8 +66,8 @@ pub struct Thread {
 pub struct ThreadReply {
     pub post_data: Post,
     pub reports: u64,
-    pub like_history: GHashMap<ActorId, u64>,
-    pub likes: u64,
+    pub like_history: GHashMap<ActorId, u128>,
+    pub likes: u128,
 }
 
 #[derive(Encode, Decode, TypeInfo, Clone)]
@@ -109,7 +109,7 @@ pub struct IoThread {
     pub replies: Vec<(PostId, IoThreadReply)>,
     pub thread_status: ThreadStatus,
     pub thread_type: ThreadType,
-    pub distributed_tokens: u64,
+    pub distributed_tokens: u128,
     pub graph_rep: Vec<(PostId, Vec<PostId>)>,
 }
 
@@ -118,14 +118,14 @@ pub struct IoThread {
 #[scale_info(crate = gstd::scale_info)]
 pub struct IoThreadReply {
     pub post_data: Post,
-    pub likes: u64,
+    pub likes: u128,
     pub reports: u64,
-    pub like_history: Vec<(ActorId, u64)>,
+    pub like_history: Vec<(ActorId, u128)>,
 }
 
 impl From<IoThreadReply> for ThreadReply {
     fn from(io_reply: IoThreadReply) -> Self {
-        let like_history: GHashMap<ActorId, u64> = io_reply
+        let like_history: GHashMap<ActorId, u128> = io_reply
             .like_history
             .into_iter()
             .map(|(actor_id, likes)| (actor_id, likes))
@@ -142,7 +142,7 @@ impl From<IoThreadReply> for ThreadReply {
 
 impl From<ThreadReply> for IoThreadReply {
     fn from(thread_reply: ThreadReply) -> Self {
-        let like_history: Vec<(ActorId, u64)> = thread_reply
+        let like_history: Vec<(ActorId, u128)> = thread_reply
             .like_history
             .into_iter()
             .map(|(actor_id, likes)| (actor_id, likes))

@@ -32,7 +32,7 @@ impl ThreadStorage {
         }
     }
 
-    pub fn like_reply(&mut self, thread_id: PostId, reply_id: PostId, like_count: u64) {
+    pub fn like_reply(&mut self, thread_id: PostId, reply_id: PostId, like_count: u128) {
         if let Some(thread) = self.threads.get_mut(&thread_id) {
             if let Some(reply) = thread.replies.get_mut(&reply_id) {
                 reply.likes += like_count;
@@ -103,7 +103,7 @@ pub enum StorageAction {
     AddLogicContractAddress(ActorId),
     PushThread(IoThread),
     PushReply(PostId, IoThreadReply),
-    LikeReply(PostId, PostId, u64),
+    LikeReply(PostId, PostId, u128),
     ChangeStatusState(PostId),
     RemoveThread(PostId),
     RemoveReply(PostId, PostId),

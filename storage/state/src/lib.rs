@@ -15,7 +15,7 @@ pub mod metafns {
         None
     }
 
-    pub fn distributed_tokens(state: State, target_post_id: PostId) -> Option<u64> {
+    pub fn distributed_tokens(state: State, target_post_id: PostId) -> Option<u128> {
         if let Some((_, io_thread)) = state
             .threads
             .iter()
@@ -86,7 +86,7 @@ pub mod metafns {
         state: State,
         target_post_id: PostId,
         target_reply_id: PostId,
-    ) -> Option<Vec<(ActorId, u64)>> {
+    ) -> Option<Vec<(ActorId, u128)>> {
         state
             .threads
             .iter()

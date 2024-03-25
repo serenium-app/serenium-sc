@@ -9,6 +9,7 @@ edition = "2021"
 gstd.workspace = true
 gmeta.workspace = true
 io.workspace = true
+sharded-fungible-token-io.workspace = true
 
 [build-dependencies]
 gear-wasm-builder.workspace = true

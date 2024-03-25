@@ -21,8 +21,6 @@ impl RewardLogic {
             address_logic: None,
         }
     }
-    pub fn add_address_ft(_address_ft: ActorId) {}
-    pub fn transfer_tokens_reward(_amount_tokens: u64, _dest: ActorId) {}
     pub fn trigger_reward_logic(thread: Thread) {
         let mut reward_logic_thread = RewardLogicThread::new(thread);
         reward_logic_thread.set_expired_thread_data();
@@ -49,7 +47,7 @@ impl RewardLogic {
 
 pub struct RewardLogicThread {
     pub thread_id: Option<PostId>,
-    pub distributed_tokens: u64,
+    pub distributed_tokens: u128,
     pub graph_rep: GHashMap<PostId, Vec<PostId>>,
     pub replies: GHashMap<PostId, ThreadReply>,
     pub expired_thread_data: Option<ExpiredThread>,
