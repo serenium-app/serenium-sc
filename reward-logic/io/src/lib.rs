@@ -11,6 +11,7 @@ pub struct RewardLogic {
     pub admin: Option<ActorId>,
     pub address_ft: Option<ActorId>,
     pub address_logic: Option<ActorId>,
+    pub address_storage: Option<ActorId>,
 }
 
 impl RewardLogic {
@@ -19,8 +20,11 @@ impl RewardLogic {
             admin: None,
             address_ft: None,
             address_logic: None,
+            address_storage: None,
         }
     }
+    pub async fn get_storage_thread(&mut self) {}
+
     pub fn trigger_reward_logic(thread: Thread) {
         let mut reward_logic_thread = RewardLogicThread::new(thread);
         reward_logic_thread.set_expired_thread_data();
@@ -210,6 +214,7 @@ impl Default for ExpiredThread {
 pub enum RewardLogicAction {
     AddAddressFT(ActorId),
     AddAddressLogic(ActorId),
+    AddAddressStorage(ActorId),
     TriggerRewardLogic(IoThread),
 }
 
@@ -219,6 +224,7 @@ pub enum RewardLogicAction {
 pub enum RewardLogicEvent {
     FTAddressAdded,
     LogicAddressAdded,
+    StorageAddressAdded,
     RewardLogicTriggered,
 }
 

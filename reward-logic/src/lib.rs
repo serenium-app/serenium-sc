@@ -39,6 +39,14 @@ async fn main() {
             msg::reply(RewardLogicEvent::LogicAddressAdded, 0).expect("");
         }
 
+        RewardLogicAction::AddAddressStorage(address) => {
+            if reward_logic.admin.expect("") != msg::source() {
+                panic!("Add Address Storage Action can only be called by admin")
+            }
+            reward_logic.address_storage = Some(address);
+            msg::reply(RewardLogicEvent::StorageAddressAdded, 0).expect("");
+        }
+
         RewardLogicAction::TriggerRewardLogic(thread) => {
             RewardLogic::trigger_reward_logic(thread.into())
         }
