@@ -123,6 +123,30 @@ pub enum StorageEvent {
     ReplyRemoved,
 }
 
+#[derive(Encode, Decode, TypeInfo)]
+#[codec(crate = gstd::codec)]
+#[scale_info(crate = gstd::scale_info)]
+pub enum StorageQuery {
+    // For winner (rule no. 1)
+    AllRepliesWithLikes(PostId),
+    // For path to the winner (rule no. 2)
+    GraphRep(PostId),
+    // For top liker of winner (rule no. 3)
+    LikeHistoryOf(PostId, PostId),
+}
+
+#[derive(Encode, Decode, TypeInfo)]
+#[codec(crate = gstd::codec)]
+#[scale_info(crate = gstd::scale_info)]
+pub enum StorageQueryReply {
+    // For winner (rule no. 1)
+    AllRepliesWithLikes(Vec<(PostId, u128)>),
+    // For path to the winner (rule no. 2)
+    GraphRep(Vec<(PostId, Vec<PostId>)>),
+    // For top liker of winner (rule no. 3)
+    LikeHistoryOf(Vec<(ActorId, u128)>),
+}
+
 impl From<ThreadStorage> for IoThreadStorage {
     fn from(thread_storage: ThreadStorage) -> Self {
         let threads: Vec<(PostId, IoThread)> = thread_storage
