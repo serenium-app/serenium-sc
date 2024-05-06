@@ -1,5 +1,5 @@
 #![no_std]
-// Test
+
 use gmeta::{InOut, Metadata, Out};
 use gstd::{collections::HashMap as GHashMap, msg, prelude::*, ActorId};
 use io::{IoThread, IoThreadReply, Post, PostId, Thread, ThreadReply, ThreadStatus, ThreadType};
@@ -76,26 +76,6 @@ impl ThreadStorage {
     }
 }
 
-#[derive(Default, Encode, Decode, TypeInfo)]
-#[codec(crate = gstd::codec)]
-#[scale_info(crate = gstd::scale_info)]
-pub struct IoThreadStorage {
-    pub threads: Vec<(PostId, IoThread)>,
-    pub admin: Option<ActorId>,
-    pub address_logic_contract: Option<ActorId>,
-}
-
-/// Represents a tiny thread, for sending the state to the client, when it asks for all threads.
-#[derive(Encode, Decode, TypeInfo)]
-#[codec(crate = gstd::codec)]
-#[scale_info(crate = gstd::scale_info)]
-pub struct TinyThread {
-    pub post_data: Post,
-    pub thread_status: ThreadStatus,
-    pub thread_type: ThreadType,
-    pub featured_reply: Option<TinyReply>,
-}
-
 #[derive(Encode, Decode, TypeInfo)]
 #[codec(crate = gstd::codec)]
 #[scale_info(crate = gstd::scale_info)]
@@ -140,51 +120,11 @@ pub enum StorageQuery {
 #[scale_info(crate = gstd::scale_info)]
 pub enum StorageQueryReply {
     // For winner (rule no. 1)
-    AllRepliesWithLikes(Vec<(PostId, u128)>),
+    AllRepliesWithLikes(GHashMap<PostId, u128>),
     // For path to the winner (rule no. 2)
-    GraphRep(Vec<(PostId, Vec<PostId>)>),
+    GraphRep(GHashMap<PostId, Vec<PostId>>),
     // For top liker of winner (rule no. 3)
-    LikeHistoryOf(Vec<(ActorId, u128)>),
-}
-
-impl From<ThreadStorage> for IoThreadStorage {
-    fn from(thread_storage: ThreadStorage) -> Self {
-        let threads: Vec<(PostId, IoThread)> = thread_storage
-            .threads
-            .into_iter()
-            .map(|(post_id, thread)| (post_id, thread.into()))
-            .collect();
-
-        IoThreadStorage {
-            threads,
-            admin: thread_storage.admin,
-            address_logic_contract: thread_storage.address_logic_contract,
-        }
-    }
-}
-
-impl From<IoThread> for TinyThread {
-    fn from(io_thread: IoThread) -> Self {
-        let featured_reply = io_thread
-            .replies
-            .into_iter()
-            .min_by_key(|(_, reply)| reply.likes)
-            .map(|(post_id, reply)| TinyReply {
-                post_id,
-                posted_at: reply.post_data.posted_at,
-                owner: reply.post_data.owner,
-                title: reply.post_data.title,
-                content: reply.post_data.content,
-                photo_url: reply.post_data.photo_url,
-            });
-
-        TinyThread {
-            post_data: io_thread.post_data,
-            thread_status: io_thread.thread_status,
-            thread_type: io_thread.thread_type,
-            featured_reply,
-        }
-    }
+    LikeHistoryOf(GHashMap<ActorId, u128>),
 }
 
 pub struct ContractMetadata;
@@ -195,5 +135,5 @@ impl Metadata for ContractMetadata {
     type Reply = ();
     type Others = ();
     type Signal = ();
-    type State = Out<IoThreadStorage>;
+    type State = InOut<StorageQuery, StorageQueryReply>;
 }

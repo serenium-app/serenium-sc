@@ -1,10 +1,7 @@
 #![no_std]
 
-use gstd::{collections::HashMap as GHashMap, msg, prelude::*, ActorId};
-use io::PostId;
-use storage_io::{
-    IoThreadStorage, StorageAction, StorageEvent, StorageQuery, StorageQueryReply, ThreadStorage,
-};
+use gstd::{collections::HashMap as GHashMap, msg, prelude::*};
+use storage_io::{StorageAction, StorageEvent, StorageQuery, StorageQueryReply, ThreadStorage};
 
 static mut THREAD_STORAGE: Option<ThreadStorage> = None;
 
@@ -78,36 +75,34 @@ extern fn state() {
     };
     let query: StorageQuery = msg::load().expect("Unable to decode query");
     let reply = match query {
-        StorageQuery::AllRepliesWithLikes(thread_id) => {
+        StorageQuery::AllRepliesWithLikes(_thread_id) => {
             // TODO: Implement a function to reduce replies to a vector of tuples containing PostId and likes
-            StorageQueryReply::AllRepliesWithLikes(vec![])
+            StorageQueryReply::AllRepliesWithLikes(GHashMap::default())
         }
         StorageQuery::GraphRep(thread_id) => {
-            let graph_rep: Option<GHashMap<PostId, Vec<PostId>>> = if let Some(graph_rep) =
-                thread_storage
-                    .threads
-                    .get(&thread_id)
-                    .and_then(|thread| Some(thread.graph_rep.clone()))
-            {
-                Option::from(graph_rep)
-            } else {
-                None
-            };
-            StorageQueryReply::GraphRep(graph_rep.into())
+            let graph_rep = thread_storage.threads.get(&thread_id).map_or_else(
+                || {
+                    // Provide a default value here
+                    Default::default()
+                },
+                |thread| &thread.graph_rep,
+            );
+
+            StorageQueryReply::GraphRep(graph_rep.clone())
         }
         StorageQuery::LikeHistoryOf(thread_id, reply_id) => {
-            let like_history: Option<GHashMap<ActorId, u128>> = if let Some(like_history) =
-                thread_storage
-                    .threads
-                    .get(&thread_id)
-                    .and_then(|thread| thread.replies.get(&reply_id))
-                    .and_then(|reply| Some(reply.like_history.clone()))
-            {
-                Option::from(like_history)
-            } else {
-                None
-            };
-            StorageQueryReply::LikeHistoryOf(like_history.into())
+            let like_history = thread_storage
+                .threads
+                .get(&thread_id)
+                .and_then(|thread| thread.replies.get(&reply_id))
+                .map_or_else(
+                    || {
+                        // Provide a default value here
+                        Default::default()
+                    },
+                    |reply| &reply.like_history,
+                );
+            StorageQueryReply::LikeHistoryOf(like_history.clone())
         }
     };
     msg::reply(reply, 0).expect("Error in sharing state");
