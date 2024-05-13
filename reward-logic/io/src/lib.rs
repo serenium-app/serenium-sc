@@ -2,7 +2,7 @@
 
 use gmeta::{InOut, Metadata, Out};
 use gstd::{collections::HashMap as GHashMap, prelude::*, ActorId};
-use io::{IoThread, PostId, Thread, ThreadReply};
+use io::{PostId, Thread, ThreadReply};
 
 #[derive(Default, Encode, Decode, TypeInfo)]
 #[codec(crate = gstd::codec)]
@@ -23,7 +23,6 @@ impl RewardLogic {
             address_storage: None,
         }
     }
-    pub async fn get_storage_thread(&mut self) {}
 
     pub fn trigger_reward_logic(thread: Thread) {
         let mut reward_logic_thread = RewardLogicThread::new(thread);
@@ -52,8 +51,8 @@ impl RewardLogic {
 pub struct RewardLogicThread {
     pub thread_id: Option<PostId>,
     pub distributed_tokens: u128,
-    pub graph_rep: GHashMap<PostId, Vec<PostId>>,
-    pub replies: GHashMap<PostId, ThreadReply>,
+    pub graph_rep: Vec<(PostId, Vec<PostId>)>,
+    pub replies: Vec<(PostId, ThreadReply)>,
     pub expired_thread_data: Option<ExpiredThread>,
 }
 
@@ -72,11 +71,13 @@ impl RewardLogicThread {
         let expired_thread_data = ExpiredThread::new();
         self.expired_thread_data = Some(expired_thread_data);
     }
-    pub fn find_winner_reply(&mut self) -> Option<PostId> {
+
+    pub fn find_winner_reply(&self) -> Option<PostId> {
+        // Iterate through the vector to find the ThreadReply with the most likes
         self.replies
-            .values()
-            .max_by_key(|thread_reply| thread_reply.likes)
-            .map(|reply| reply.post_data.post_id)
+            .iter()
+            .max_by_key(|(_, reply)| reply.likes)
+            .map(|(id, _)| *id) // Return the PostId of the winning reply
     }
 
     /// Finds the top liker winner based on the `like_history` of the winner's reply.
@@ -95,19 +96,27 @@ impl RewardLogicThread {
     /// - `None`: If `expired_thread_data` is not present, or if the winner reply is not available,
     ///   or if the `like_history` is empty.
     pub fn find_top_liker_winner(&mut self) -> Option<ActorId> {
+        // Retrieve the expired thread data
         self.expired_thread_data
             .as_ref()
             .and_then(|expired_thread_data| {
-                expired_thread_data.winner_reply.and_then(|winner_reply| {
-                    self.replies
-                        .get_mut(&winner_reply)
-                        .expect("")
-                        .like_history
-                        .iter()
-                        .max_by_key(|&(_, v)| *v)
-                        .map(|(k, _)| k)
-                        .cloned()
-                })
+                // Retrieve the PostId of the winner reply
+                expired_thread_data
+                    .winner_reply
+                    .and_then(|winner_reply_id| {
+                        // Find the tuple in the vector of replies
+                        self.replies
+                            .iter()
+                            .find(|(id, _)| *id == winner_reply_id)
+                            .and_then(|(_, reply)| {
+                                // Find the ActorId with the highest value in like history
+                                reply
+                                    .like_history
+                                    .iter()
+                                    .max_by_key(|&(_, likes)| *likes)
+                                    .map(|(actor_id, _)| actor_id.clone())
+                            })
+                    })
             })
     }
 
@@ -126,7 +135,7 @@ impl RewardLogicThread {
     /// - `winner_reply` within `expired_thread_data` is None, indicating that the winner reply node is not set.
     ///
     /// ```
-    pub fn find_path_winners(&mut self) -> Option<Vec<PostId>> {
+    pub fn find_path_winners(&self) -> Option<Vec<PostId>> {
         let start = self.thread_id.expect("Thread ID is not set.");
         let target = self
             .expired_thread_data
@@ -134,6 +143,7 @@ impl RewardLogicThread {
             .expect("Expired thread data is not set.")
             .winner_reply
             .expect("Winner reply is not set.");
+
         let mut visited = collections::HashSet::new();
         let mut queue = collections::VecDeque::new();
         let mut path = GHashMap::new();
@@ -155,7 +165,8 @@ impl RewardLogicThread {
                 return Some(result);
             }
 
-            if let Some(neighbors) = self.graph_rep.get(&node) {
+            // Retrieve neighbors from the adjacency list
+            if let Some((_, neighbors)) = self.graph_rep.iter().find(|(id, _)| *id == node) {
                 for &neighbor in neighbors {
                     if visited.insert(neighbor) {
                         queue.push_back(neighbor);
@@ -178,7 +189,12 @@ impl RewardLogicThread {
         self.find_path_winners().map(|path_winners_post_id| {
             path_winners_post_id
                 .iter()
-                .map(|&post_id| self.replies.get(&post_id).unwrap().post_data.owner)
+                .filter_map(|post_id| {
+                    self.replies
+                        .iter()
+                        .find(|(id, _)| id == post_id)
+                        .map(|(_, reply)| reply.post_data.owner.clone())
+                })
                 .collect()
         })
     }
@@ -215,7 +231,7 @@ pub enum RewardLogicAction {
     AddAddressFT(ActorId),
     AddAddressLogic(ActorId),
     AddAddressStorage(ActorId),
-    TriggerRewardLogic(IoThread),
+    TriggerRewardLogic(Thread),
 }
 
 #[derive(Encode, Decode, TypeInfo)]

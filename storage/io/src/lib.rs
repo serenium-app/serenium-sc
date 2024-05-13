@@ -1,8 +1,8 @@
 #![no_std]
 
-use gmeta::{InOut, Metadata, Out};
+use gmeta::{InOut, Metadata};
 use gstd::{collections::HashMap as GHashMap, msg, prelude::*, ActorId};
-use io::{IoThread, IoThreadReply, Post, PostId, Thread, ThreadReply, ThreadStatus, ThreadType};
+use io::{Post, PostId, Thread, ThreadReply, ThreadStatus};
 
 pub type TinyReply = Post;
 
@@ -28,13 +28,16 @@ impl ThreadStorage {
 
     pub fn push_reply(&mut self, thread_id: PostId, reply: ThreadReply) {
         if let Some(thread) = self.threads.get_mut(&thread_id) {
-            thread.replies.insert(reply.post_data.post_id, reply);
+            thread.replies.push((reply.post_data.post_id, reply));
         }
     }
 
     pub fn like_reply(&mut self, thread_id: PostId, reply_id: PostId, like_count: u128) {
+        // Retrieve the mutable reference to the thread by its `thread_id`
         if let Some(thread) = self.threads.get_mut(&thread_id) {
-            if let Some(reply) = thread.replies.get_mut(&reply_id) {
+            // Find the mutable reference to the `ThreadReply` tuple within the thread
+            if let Some((_, reply)) = thread.replies.iter_mut().find(|(id, _)| *id == reply_id) {
+                // Increment the reply's likes by the specified amount
                 reply.likes += like_count;
             }
         }
@@ -58,20 +61,31 @@ impl ThreadStorage {
     }
 
     pub fn remove_reply(&mut self, thread_id: PostId, reply_id: PostId) {
-        if msg::source() != self.admin.expect("Unable to retrieve admin ActorId") {
-            panic!("Reply may only be removed by admin")
+        // Check if the caller is the admin
+        let admin_id = self.admin.expect("Admin ActorId must be set");
+        if msg::source() != admin_id {
+            panic!("Reply may only be removed by admin");
         }
-        self.threads
-            .get_mut(&thread_id)
-            .and_then(|thread| thread.replies.remove(&reply_id));
+
+        // Attempt to retrieve the thread and remove the reply
+        if let Some(thread) = self.threads.get_mut(&thread_id) {
+            if let Some(index) = thread.replies.iter().position(|(id, _)| *id == reply_id) {
+                thread.replies.remove(index);
+            } else {
+                // Optionally handle the case where the reply does not exist
+            }
+        } else {
+            // Optionally handle the case where the thread does not exist
+        }
     }
 
-    pub fn get_featured_reply(&mut self, thread_id: PostId) -> Option<&ThreadReply> {
-        self.threads.get_mut(&thread_id).and_then(|thread| {
+    pub fn get_featured_reply(&self, thread_id: PostId) -> Option<&ThreadReply> {
+        self.threads.get(&thread_id).and_then(|thread| {
             thread
                 .replies
-                .values()
-                .min_by_key(|thread_reply| thread_reply.likes)
+                .iter()
+                .min_by_key(|(_, reply)| reply.likes)
+                .map(|(_, reply)| reply)
         })
     }
 }
@@ -81,8 +95,8 @@ impl ThreadStorage {
 #[scale_info(crate = gstd::scale_info)]
 pub enum StorageAction {
     AddLogicContractAddress(ActorId),
-    PushThread(IoThread),
-    PushReply(PostId, IoThreadReply),
+    PushThread(Thread),
+    PushReply(PostId, ThreadReply),
     LikeReply(PostId, PostId, u128),
     ChangeStatusState(PostId),
     RemoveThread(PostId),
@@ -120,11 +134,11 @@ pub enum StorageQuery {
 #[scale_info(crate = gstd::scale_info)]
 pub enum StorageQueryReply {
     // For winner (rule no. 1)
-    AllRepliesWithLikes(GHashMap<PostId, u128>),
+    AllRepliesWithLikes(Vec<(PostId, u128)>),
     // For path to the winner (rule no. 2)
-    GraphRep(GHashMap<PostId, Vec<PostId>>),
+    GraphRep(Vec<(PostId, Vec<PostId>)>),
     // For top liker of winner (rule no. 3)
-    LikeHistoryOf(GHashMap<ActorId, u128>),
+    LikeHistoryOf(Vec<(ActorId, u128)>),
 }
 
 pub struct ContractMetadata;

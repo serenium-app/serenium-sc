@@ -2,7 +2,7 @@
 
 use gmeta::{InOut, Metadata, Out};
 use gstd::{msg, prelude::*, ActorId};
-use io::{InitReply, InitThread, IoThread, Post, PostId, Thread, ThreadReply};
+use io::{InitReply, InitThread, Post, PostId, Thread, ThreadReply};
 use reward_logic_io::{RewardLogicAction, RewardLogicEvent};
 use sharded_fungible_token_io::{FTokenEvent, LogicAction};
 use storage_io::{StorageAction, StorageEvent};
@@ -183,7 +183,7 @@ impl ThreadLogic {
         };
     }
 
-    pub async fn send_trigger_reward_msg(&mut self, thread: IoThread) -> Result<(), ()> {
+    pub async fn send_trigger_reward_msg(&mut self, thread: Thread) -> Result<(), ()> {
         let reward_res = msg::send_for_reply_as::<_, RewardLogicEvent>(
             self.address_reward_logic.expect(""),
             RewardLogicAction::TriggerRewardLogic(thread),

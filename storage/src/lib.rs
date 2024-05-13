@@ -1,6 +1,6 @@
 #![no_std]
 
-use gstd::{collections::HashMap as GHashMap, msg, prelude::*};
+use gstd::{msg, prelude::*};
 use storage_io::{StorageAction, StorageEvent, StorageQuery, StorageQueryReply, ThreadStorage};
 
 static mut THREAD_STORAGE: Option<ThreadStorage> = None;
@@ -77,16 +77,14 @@ extern fn state() {
     let reply = match query {
         StorageQuery::AllRepliesWithLikes(_thread_id) => {
             // TODO: Implement a function to reduce replies to a vector of tuples containing PostId and likes
-            StorageQueryReply::AllRepliesWithLikes(GHashMap::default())
+            StorageQueryReply::AllRepliesWithLikes(vec![])
         }
         StorageQuery::GraphRep(thread_id) => {
-            let graph_rep = thread_storage.threads.get(&thread_id).map_or_else(
-                || {
-                    // Provide a default value here
-                    Default::default()
-                },
-                |thread| &thread.graph_rep,
-            );
+            let graph_rep = thread_storage
+                .threads
+                .get(&thread_id)
+                .map(|thread| &thread.graph_rep)
+                .expect("thread not found");
 
             StorageQueryReply::GraphRep(graph_rep.clone())
         }
@@ -94,15 +92,9 @@ extern fn state() {
             let like_history = thread_storage
                 .threads
                 .get(&thread_id)
-                .and_then(|thread| thread.replies.get(&reply_id))
-                .map_or_else(
-                    || {
-                        // Provide a default value here
-                        Default::default()
-                    },
-                    |reply| &reply.like_history,
-                );
-            StorageQueryReply::LikeHistoryOf(like_history.clone())
+                .and_then(|thread| thread.replies.iter().find(|(id, _)| *id == reply_id))
+                .map(|(_, reply)| &reply.like_history);
+            StorageQueryReply::LikeHistoryOf(like_history.unwrap().clone())
         }
     };
     msg::reply(reply, 0).expect("Error in sharing state");
