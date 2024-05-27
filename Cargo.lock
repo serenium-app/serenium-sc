@@ -3032,6 +3032,7 @@ dependencies = [
  "gstd",
  "io",
  "sharded-fungible-token-io",
+ "storage-io",
 ]
 
 [[package]]

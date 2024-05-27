@@ -1,8 +1,9 @@
 #![no_std]
 
 use gmeta::{InOut, Metadata, Out};
-use gstd::{collections::HashMap as GHashMap, prelude::*, ActorId};
-use io::{PostId, Thread, ThreadReply};
+use gstd::{collections::HashMap as GHashMap, msg, prelude::*, ActorId};
+use io::{Post, PostId, Thread, ThreadReply};
+use storage_io::{StorageQuery, StorageQueryReply};
 
 #[derive(Default, Encode, Decode, TypeInfo)]
 #[codec(crate = gstd::codec)]
@@ -21,6 +22,75 @@ impl RewardLogic {
             address_ft: None,
             address_logic: None,
             address_storage: None,
+        }
+    }
+
+    pub async fn fetch_all_replies_with_likes(
+        &mut self,
+        thread_id: PostId,
+    ) -> Option<Vec<(PostId, u128)>> {
+        let res = msg::send_for_reply_as::<_, StorageQueryReply>(
+            self.address_storage.expect(""),
+            StorageQuery::AllRepliesWithLikes(thread_id),
+            0,
+            0,
+        )
+        .expect("")
+        .await;
+
+        match res {
+            Ok(event) => match event {
+                StorageQueryReply::AllRepliesWithLikes(all_replies_with_likes) => {
+                    return Some(all_replies_with_likes)
+                }
+                _ => None,
+            },
+            Err(_) => None,
+        }
+    }
+
+    pub async fn fetch_graph_rep(
+        &mut self,
+        thread_id: PostId,
+    ) -> Option<Vec<(PostId, Vec<PostId>)>> {
+        let res = msg::send_for_reply_as::<_, StorageQueryReply>(
+            self.address_storage.expect(""),
+            StorageQuery::GraphRep(thread_id),
+            0,
+            0,
+        )
+        .expect("")
+        .await;
+
+        match res {
+            Ok(event) => match event {
+                StorageQueryReply::GraphRep(graph_rep) => return Some(graph_rep),
+                _ => None,
+            },
+            Err(_) => None,
+        }
+    }
+
+    pub async fn fetch_like_history(
+        &mut self,
+        thread_id: PostId,
+        reply_id: PostId,
+    ) -> Option<Vec<(ActorId, u128)>> {
+        let res = msg::send_for_reply_as::<_, StorageQueryReply>(
+            self.address_storage.expect(""),
+            StorageQuery::LikeHistoryOf(thread_id, reply_id),
+            0,
+            0,
+        )
+        .expect("")
+        .await;
+
+        match res {
+            Ok(event) => match event {
+                StorageQueryReply::LikeHistoryOf(like_history) => return Some(like_history),
+                _ => None,
+            },
+            Err(_) => None,
         }
     }
 
