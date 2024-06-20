@@ -96,6 +96,7 @@ impl RewardLogic {
 
     pub fn trigger_reward_logic(thread: Thread) {
         let mut reward_logic_thread = RewardLogicThread::new(thread);
+        // Fetch reward logic thread data
         reward_logic_thread.set_expired_thread_data();
 
         reward_logic_thread
