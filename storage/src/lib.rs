@@ -1,6 +1,7 @@
 #![no_std]
 
 use gstd::{msg, prelude::*};
+use io::PostId;
 use storage_io::{StorageAction, StorageEvent, StorageQuery, StorageQueryReply, ThreadStorage};
 
 static mut THREAD_STORAGE: Option<ThreadStorage> = None;
@@ -75,9 +76,20 @@ extern fn state() {
     };
     let query: StorageQuery = msg::load().expect("Unable to decode query");
     let reply = match query {
-        StorageQuery::AllRepliesWithLikes(_thread_id) => {
-            // TODO: Implement a function to reduce replies to a vector of tuples containing PostId and likes
-            StorageQueryReply::AllRepliesWithLikes(vec![])
+        StorageQuery::AllRepliesWithLikes(thread_id) => {
+            let reduced_replies: Vec<(PostId, u128)> = thread_storage
+                .threads
+                .get(&thread_id)
+                .map(|thread| {
+                    thread
+                        .replies
+                        .iter()
+                        .map(|(post_id, reply)| (*post_id, reply.likes))
+                        .collect::<Vec<_>>()
+                })
+                .expect("thread not found");
+
+            StorageQueryReply::AllRepliesWithLikes(reduced_replies)
         }
         StorageQuery::GraphRep(thread_id) => {
             let graph_rep = thread_storage
