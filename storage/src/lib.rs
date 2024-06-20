@@ -34,13 +34,13 @@ extern fn handle() {
         }
         StorageAction::PushThread(thread) => {
             let thread_id = thread.post_data.post_id;
-            thread_storage.push_thread(thread.into());
+            thread_storage.push_thread(thread);
             msg::reply(StorageEvent::ThreadPush(thread_id), 0)
                 .expect("Failed to reply to PushThread Action");
         }
         StorageAction::PushReply(thread_id, reply) => {
             let reply_id = reply.post_data.post_id;
-            thread_storage.push_reply(thread_id, reply.into());
+            thread_storage.push_reply(thread_id, reply);
             msg::reply(StorageEvent::ReplyPush(reply_id), 0)
                 .expect("Failed to reply to PushReply Action");
         }

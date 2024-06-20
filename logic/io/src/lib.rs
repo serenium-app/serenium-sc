@@ -98,7 +98,7 @@ impl ThreadLogic {
 
         let res = msg::send_for_reply_as::<_, StorageEvent>(
             self.address_storage.expect(""),
-            StorageAction::PushThread(thread.into()),
+            StorageAction::PushThread(thread),
             0,
             0,
         )
@@ -137,7 +137,7 @@ impl ThreadLogic {
 
         let res = msg::send_for_reply_as::<_, StorageEvent>(
             self.address_storage.expect(""),
-            StorageAction::PushReply(reply.post_data.post_id, reply.into()),
+            StorageAction::PushReply(reply.post_data.post_id, reply),
             0,
             0,
         )

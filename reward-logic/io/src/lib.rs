@@ -2,7 +2,7 @@
 
 use gmeta::{InOut, Metadata, Out};
 use gstd::{collections::HashMap as GHashMap, msg, prelude::*, ActorId};
-use io::{Post, PostId, Thread, ThreadReply};
+use io::{PostId, Thread, ThreadReply};
 use storage_io::{StorageQuery, StorageQueryReply};
 
 #[derive(Default, Encode, Decode, TypeInfo)]
@@ -41,7 +41,7 @@ impl RewardLogic {
         match res {
             Ok(event) => match event {
                 StorageQueryReply::AllRepliesWithLikes(all_replies_with_likes) => {
-                    return Some(all_replies_with_likes)
+                    Some(all_replies_with_likes)
                 }
                 _ => None,
             },
@@ -64,7 +64,7 @@ impl RewardLogic {
 
         match res {
             Ok(event) => match event {
-                StorageQueryReply::GraphRep(graph_rep) => return Some(graph_rep),
+                StorageQueryReply::GraphRep(graph_rep) => Some(graph_rep),
                 _ => None,
             },
             Err(_) => None,
@@ -87,7 +87,7 @@ impl RewardLogic {
 
         match res {
             Ok(event) => match event {
-                StorageQueryReply::LikeHistoryOf(like_history) => return Some(like_history),
+                StorageQueryReply::LikeHistoryOf(like_history) => Some(like_history),
                 _ => None,
             },
             Err(_) => None,
@@ -184,7 +184,7 @@ impl RewardLogicThread {
                                     .like_history
                                     .iter()
                                     .max_by_key(|&(_, likes)| *likes)
-                                    .map(|(actor_id, _)| actor_id.clone())
+                                    .map(|(actor_id, _)| *actor_id)
                             })
                     })
             })
@@ -263,7 +263,7 @@ impl RewardLogicThread {
                     self.replies
                         .iter()
                         .find(|(id, _)| id == post_id)
-                        .map(|(_, reply)| reply.post_data.owner.clone())
+                        .map(|(_, reply)| reply.post_data.owner)
                 })
                 .collect()
         })
