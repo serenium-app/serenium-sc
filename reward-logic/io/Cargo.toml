@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 gstd.workspace = true
 gmeta.workspace = true
+storage-io.workspace = true
 io.workspace = true
 sharded-fungible-token-io.workspace = true
 

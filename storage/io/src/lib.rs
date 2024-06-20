@@ -1,8 +1,8 @@
 #![no_std]
-// Test
-use gmeta::{InOut, Metadata, Out};
+
+use gmeta::{InOut, Metadata};
 use gstd::{collections::HashMap as GHashMap, msg, prelude::*, ActorId};
-use io::{IoThread, IoThreadReply, Post, PostId, Thread, ThreadReply, ThreadStatus, ThreadType};
+use io::{Post, PostId, Thread, ThreadReply, ThreadStatus};
 
 pub type TinyReply = Post;
 
@@ -28,13 +28,16 @@ impl ThreadStorage {
 
     pub fn push_reply(&mut self, thread_id: PostId, reply: ThreadReply) {
         if let Some(thread) = self.threads.get_mut(&thread_id) {
-            thread.replies.insert(reply.post_data.post_id, reply);
+            thread.replies.push((reply.post_data.post_id, reply));
         }
     }
 
     pub fn like_reply(&mut self, thread_id: PostId, reply_id: PostId, like_count: u128) {
+        // Retrieve the mutable reference to the thread by its `thread_id`
         if let Some(thread) = self.threads.get_mut(&thread_id) {
-            if let Some(reply) = thread.replies.get_mut(&reply_id) {
+            // Find the mutable reference to the `ThreadReply` tuple within the thread
+            if let Some((_, reply)) = thread.replies.iter_mut().find(|(id, _)| *id == reply_id) {
+                // Increment the reply's likes by the specified amount
                 reply.likes += like_count;
             }
         }
@@ -58,42 +61,33 @@ impl ThreadStorage {
     }
 
     pub fn remove_reply(&mut self, thread_id: PostId, reply_id: PostId) {
-        if msg::source() != self.admin.expect("Unable to retrieve admin ActorId") {
-            panic!("Reply may only be removed by admin")
+        // Check if the caller is the admin
+        let admin_id = self.admin.expect("Admin ActorId must be set");
+        if msg::source() != admin_id {
+            panic!("Reply may only be removed by admin");
         }
-        self.threads
-            .get_mut(&thread_id)
-            .and_then(|thread| thread.replies.remove(&reply_id));
+
+        // Attempt to retrieve the thread and remove the reply
+        if let Some(thread) = self.threads.get_mut(&thread_id) {
+            if let Some(index) = thread.replies.iter().position(|(id, _)| *id == reply_id) {
+                thread.replies.remove(index);
+            } else {
+                // Optionally handle the case where the reply does not exist
+            }
+        } else {
+            // Optionally handle the case where the thread does not exist
+        }
     }
 
-    pub fn get_featured_reply(&mut self, thread_id: PostId) -> Option<&ThreadReply> {
-        self.threads.get_mut(&thread_id).and_then(|thread| {
+    pub fn get_featured_reply(&self, thread_id: PostId) -> Option<&ThreadReply> {
+        self.threads.get(&thread_id).and_then(|thread| {
             thread
                 .replies
-                .values()
-                .min_by_key(|thread_reply| thread_reply.likes)
+                .iter()
+                .min_by_key(|(_, reply)| reply.likes)
+                .map(|(_, reply)| reply)
         })
     }
-}
-
-#[derive(Default, Encode, Decode, TypeInfo)]
-#[codec(crate = gstd::codec)]
-#[scale_info(crate = gstd::scale_info)]
-pub struct IoThreadStorage {
-    pub threads: Vec<(PostId, IoThread)>,
-    pub admin: Option<ActorId>,
-    pub address_logic_contract: Option<ActorId>,
-}
-
-/// Represents a tiny thread, for sending the state to the client, when it asks for all threads.
-#[derive(Encode, Decode, TypeInfo)]
-#[codec(crate = gstd::codec)]
-#[scale_info(crate = gstd::scale_info)]
-pub struct TinyThread {
-    pub post_data: Post,
-    pub thread_status: ThreadStatus,
-    pub thread_type: ThreadType,
-    pub featured_reply: Option<TinyReply>,
 }
 
 #[derive(Encode, Decode, TypeInfo)]
@@ -101,8 +95,8 @@ pub struct TinyThread {
 #[scale_info(crate = gstd::scale_info)]
 pub enum StorageAction {
     AddLogicContractAddress(ActorId),
-    PushThread(IoThread),
-    PushReply(PostId, IoThreadReply),
+    PushThread(Thread),
+    PushReply(PostId, ThreadReply),
     LikeReply(PostId, PostId, u128),
     ChangeStatusState(PostId),
     RemoveThread(PostId),
@@ -123,44 +117,28 @@ pub enum StorageEvent {
     ReplyRemoved,
 }
 
-impl From<ThreadStorage> for IoThreadStorage {
-    fn from(thread_storage: ThreadStorage) -> Self {
-        let threads: Vec<(PostId, IoThread)> = thread_storage
-            .threads
-            .into_iter()
-            .map(|(post_id, thread)| (post_id, thread.into()))
-            .collect();
-
-        IoThreadStorage {
-            threads,
-            admin: thread_storage.admin,
-            address_logic_contract: thread_storage.address_logic_contract,
-        }
-    }
+#[derive(Encode, Decode, TypeInfo)]
+#[codec(crate = gstd::codec)]
+#[scale_info(crate = gstd::scale_info)]
+pub enum StorageQuery {
+    // For winner (rule no. 1)
+    AllRepliesWithLikes(PostId),
+    // For path to the winner (rule no. 2)
+    GraphRep(PostId),
+    // For top liker of winner (rule no. 3)
+    LikeHistoryOf(PostId, PostId),
 }
 
-impl From<IoThread> for TinyThread {
-    fn from(io_thread: IoThread) -> Self {
-        let featured_reply = io_thread
-            .replies
-            .into_iter()
-            .min_by_key(|(_, reply)| reply.likes)
-            .map(|(post_id, reply)| TinyReply {
-                post_id,
-                posted_at: reply.post_data.posted_at,
-                owner: reply.post_data.owner,
-                title: reply.post_data.title,
-                content: reply.post_data.content,
-                photo_url: reply.post_data.photo_url,
-            });
-
-        TinyThread {
-            post_data: io_thread.post_data,
-            thread_status: io_thread.thread_status,
-            thread_type: io_thread.thread_type,
-            featured_reply,
-        }
-    }
+#[derive(Encode, Decode, TypeInfo)]
+#[codec(crate = gstd::codec)]
+#[scale_info(crate = gstd::scale_info)]
+pub enum StorageQueryReply {
+    // For winner (rule no. 1)
+    AllRepliesWithLikes(Vec<(PostId, u128)>),
+    // For path to the winner (rule no. 2)
+    GraphRep(Vec<(PostId, Vec<PostId>)>),
+    // For top liker of winner (rule no. 3)
+    LikeHistoryOf(Vec<(ActorId, u128)>),
 }
 
 pub struct ContractMetadata;
@@ -171,5 +149,5 @@ impl Metadata for ContractMetadata {
     type Reply = ();
     type Others = ();
     type Signal = ();
-    type State = Out<IoThreadStorage>;
+    type State = InOut<StorageQuery, StorageQueryReply>;
 }

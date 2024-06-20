@@ -1,7 +1,7 @@
 #![no_std]
 
 use gstd::{msg, prelude::*};
-use storage_io::{IoThreadStorage, StorageAction, StorageEvent, ThreadStorage};
+use storage_io::{StorageAction, StorageEvent, StorageQuery, StorageQueryReply, ThreadStorage};
 
 static mut THREAD_STORAGE: Option<ThreadStorage> = None;
 
@@ -34,13 +34,13 @@ extern fn handle() {
         }
         StorageAction::PushThread(thread) => {
             let thread_id = thread.post_data.post_id;
-            thread_storage.push_thread(thread.into());
+            thread_storage.push_thread(thread);
             msg::reply(StorageEvent::ThreadPush(thread_id), 0)
                 .expect("Failed to reply to PushThread Action");
         }
         StorageAction::PushReply(thread_id, reply) => {
             let reply_id = reply.post_data.post_id;
-            thread_storage.push_reply(thread_id, reply.into());
+            thread_storage.push_reply(thread_id, reply);
             msg::reply(StorageEvent::ReplyPush(reply_id), 0)
                 .expect("Failed to reply to PushReply Action");
         }
@@ -73,7 +73,29 @@ extern fn state() {
             .take()
             .expect("Unexpected error in taking state")
     };
-    msg::reply::<IoThreadStorage>(thread_storage.into(), 0).expect(
-        "Failed to encode or reply with `<ContractMetadata as Metadata>::State` from `state()`",
-    );
+    let query: StorageQuery = msg::load().expect("Unable to decode query");
+    let reply = match query {
+        StorageQuery::AllRepliesWithLikes(_thread_id) => {
+            // TODO: Implement a function to reduce replies to a vector of tuples containing PostId and likes
+            StorageQueryReply::AllRepliesWithLikes(vec![])
+        }
+        StorageQuery::GraphRep(thread_id) => {
+            let graph_rep = thread_storage
+                .threads
+                .get(&thread_id)
+                .map(|thread| &thread.graph_rep)
+                .expect("thread not found");
+
+            StorageQueryReply::GraphRep(graph_rep.clone())
+        }
+        StorageQuery::LikeHistoryOf(thread_id, reply_id) => {
+            let like_history = thread_storage
+                .threads
+                .get(&thread_id)
+                .and_then(|thread| thread.replies.iter().find(|(id, _)| *id == reply_id))
+                .map(|(_, reply)| &reply.like_history);
+            StorageQueryReply::LikeHistoryOf(like_history.unwrap().clone())
+        }
+    };
+    msg::reply(reply, 0).expect("Error in sharing state");
 }
