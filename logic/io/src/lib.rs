@@ -183,10 +183,10 @@ impl ThreadLogic {
         };
     }
 
-    pub async fn send_trigger_reward_msg(&mut self, thread: Thread) -> Result<(), ()> {
+    pub async fn send_trigger_reward_msg(&mut self, thread_id: PostId) -> Result<(), ()> {
         let reward_res = msg::send_for_reply_as::<_, RewardLogicEvent>(
             self.address_reward_logic.expect(""),
-            RewardLogicAction::TriggerRewardLogic(thread),
+            RewardLogicAction::TriggerRewardLogic(thread_id),
             0,
             0,
         )

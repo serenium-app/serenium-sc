@@ -1,6 +1,6 @@
 #![no_std]
 
-use gstd::{msg, prelude::*};
+use gstd::{msg, prelude::*, ActorId};
 use io::PostId;
 use storage_io::{StorageAction, StorageEvent, StorageQuery, StorageQueryReply, ThreadStorage};
 
@@ -77,14 +77,14 @@ extern fn state() {
     let query: StorageQuery = msg::load().expect("Unable to decode query");
     let reply = match query {
         StorageQuery::AllRepliesWithLikes(thread_id) => {
-            let reduced_replies: Vec<(PostId, u128)> = thread_storage
+            let reduced_replies: Vec<(PostId, ActorId, u128)> = thread_storage
                 .threads
                 .get(&thread_id)
                 .map(|thread| {
                     thread
                         .replies
                         .iter()
-                        .map(|(post_id, reply)| (*post_id, reply.likes))
+                        .map(|(post_id, reply)| (*post_id, reply.post_data.owner, reply.likes))
                         .collect::<Vec<_>>()
                 })
                 .expect("thread not found");
