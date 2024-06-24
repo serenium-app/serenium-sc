@@ -2,7 +2,7 @@
 
 use gmeta::{InOut, Metadata, Out};
 use gstd::{collections::HashMap as GHashMap, msg, prelude::*, ActorId};
-use io::{PostId, Thread, ThreadReply};
+use io::PostId;
 use storage_io::{StorageQuery, StorageQueryReply};
 
 #[derive(Default, Encode, Decode, TypeInfo)]
@@ -28,7 +28,7 @@ impl RewardLogic {
     pub async fn fetch_all_replies_with_likes(
         &mut self,
         thread_id: PostId,
-    ) -> Option<Vec<(PostId, u128)>> {
+    ) -> Option<Vec<(PostId, ActorId, u128)>> {
         let res = msg::send_for_reply_as::<_, StorageQueryReply>(
             self.address_storage.expect(""),
             StorageQuery::AllRepliesWithLikes(thread_id),
@@ -94,28 +94,8 @@ impl RewardLogic {
         }
     }
 
-    pub fn trigger_reward_logic(thread: Thread) {
-        let mut reward_logic_thread = RewardLogicThread::new(thread);
-        // Fetch reward logic thread data
-        reward_logic_thread.set_expired_thread_data();
-
-        reward_logic_thread
-            .expired_thread_data
-            .as_mut()
-            .expect("")
-            .winner_reply = reward_logic_thread.find_winner_reply();
-
-        reward_logic_thread
-            .expired_thread_data
-            .as_mut()
-            .expect("")
-            .top_liker_winner = reward_logic_thread.find_top_liker_winner();
-
-        reward_logic_thread
-            .expired_thread_data
-            .as_mut()
-            .expect("")
-            .path_winners = reward_logic_thread.find_path_winners_actors();
+    pub async fn trigger_reward_logic(&mut self, thread_id: PostId) {
+        let _reward_logic_thread = RewardLogicThread::new(self, thread_id).await;
     }
 }
 
@@ -123,19 +103,71 @@ pub struct RewardLogicThread {
     pub thread_id: Option<PostId>,
     pub distributed_tokens: u128,
     pub graph_rep: Vec<(PostId, Vec<PostId>)>,
-    pub replies: Vec<(PostId, ThreadReply)>,
+    pub all_replies_with_likes: Vec<(PostId, ActorId, u128)>,
+    pub winner_reply_like_history: Vec<(ActorId, u128)>,
     pub expired_thread_data: Option<ExpiredThread>,
 }
 
 impl RewardLogicThread {
-    pub fn new(thread: Thread) -> Self {
-        RewardLogicThread {
-            thread_id: None,
-            distributed_tokens: thread.distributed_tokens,
-            graph_rep: thread.graph_rep,
-            replies: thread.replies,
+    /// Constructs a new `RewardLogicThread` and initializes it with fetched data.
+    ///
+    /// # Parameters
+    ///
+    /// - `self_ref`: A reference to the calling object, providing methods for fetching data.
+    /// - `thread_id`: The ID of the thread to fetch data for.
+    ///
+    /// # Returns
+    ///
+    /// A new instance of `RewardLogicThread` initialized with fetched data.
+    pub async fn new(self_ref: &mut RewardLogic, thread_id: PostId) -> Self {
+        let mut reward_logic_thread = RewardLogicThread {
+            thread_id: Some(thread_id),
+            distributed_tokens: 0,
+            graph_rep: Vec::new(),
+            all_replies_with_likes: Vec::new(),
+            winner_reply_like_history: Vec::new(),
             expired_thread_data: None,
-        }
+        };
+
+        reward_logic_thread.set_expired_thread_data();
+
+        // Fetch reward logic thread data here
+        reward_logic_thread.all_replies_with_likes = self_ref
+            .fetch_all_replies_with_likes(thread_id)
+            .await
+            .expect("Error in fetching all replies with likes");
+
+        reward_logic_thread
+            .expired_thread_data
+            .as_mut()
+            .expect("")
+            .winner_reply = reward_logic_thread.find_winner_reply();
+
+        // Fetch like history of winner reply
+        let (reply_id, _) = reward_logic_thread
+            .expired_thread_data
+            .as_mut()
+            .expect("")
+            .winner_reply
+            .expect("Winner reply not found");
+        reward_logic_thread.winner_reply_like_history = self_ref
+            .fetch_like_history(thread_id, reply_id)
+            .await
+            .expect("");
+
+        reward_logic_thread
+            .expired_thread_data
+            .as_mut()
+            .expect("")
+            .top_liker_winner = reward_logic_thread.find_top_liker_winner();
+
+        // Fetch graph rep
+        reward_logic_thread.graph_rep = self_ref
+            .fetch_graph_rep(thread_id)
+            .await
+            .expect("Error in fetching thread's graph rep");
+
+        reward_logic_thread
     }
 
     pub fn set_expired_thread_data(&mut self) {
@@ -143,52 +175,30 @@ impl RewardLogicThread {
         self.expired_thread_data = Some(expired_thread_data);
     }
 
-    pub fn find_winner_reply(&self) -> Option<PostId> {
-        // Iterate through the vector to find the ThreadReply with the most likes
-        self.replies
+    pub fn find_winner_reply(&self) -> Option<(PostId, ActorId)> {
+        self.all_replies_with_likes
             .iter()
-            .max_by_key(|(_, reply)| reply.likes)
-            .map(|(id, _)| *id) // Return the PostId of the winning reply
+            .max_by_key(|(_, _, likes)| likes)
+            .map(|(reply_id, actor_id, _)| (*reply_id, *actor_id)) // Return the PostId and ActorId of the winning reply
     }
 
-    /// Finds the top liker winner based on the `like_history` of the winner's reply.
+    /// Finds the `ActorId` of the actor who has given the most likes to the winner has given the most likes.
     ///
-    /// This method retrieves the winner reply from `expired_thread_data`, then finds the entry in
-    /// `self.replies` corresponding to the winner reply. It then iterates over the `like_history`
-    /// associated with the winner reply to find the key (ActorId) corresponding to the entry with
-    /// the highest value. If such an entry exists, it returns `Some(ActorId)` representing the key
-    /// of the top liker winner. If `expired_thread_data` is not present, or if the winner reply is
-    /// not available, or if the `like_history` is empty, it returns `None`.
+    /// This function iterates through the `winner_reply_like_history` collection,
+    /// which stores pairs of `ActorId` and the number of likes given by that actor.
+    /// It returns the `ActorId` of the actor with the highest number of likes given.
     ///
     /// # Returns
     ///
-    /// - `Some(ActorId)`: The key corresponding to the entry with the highest value in the
-    ///   `like_history` of the winner's reply, if found.
-    /// - `None`: If `expired_thread_data` is not present, or if the winner reply is not available,
-    ///   or if the `like_history` is empty.
+    /// - `Some(ActorId)`: The `ActorId` of the actor who has given the most likes, if the collection is not empty.
+    /// - `None`: If the `winner_reply_like_history` collection is empty.
+    ///
+    /// ```
     pub fn find_top_liker_winner(&mut self) -> Option<ActorId> {
-        // Retrieve the expired thread data
-        self.expired_thread_data
-            .as_ref()
-            .and_then(|expired_thread_data| {
-                // Retrieve the PostId of the winner reply
-                expired_thread_data
-                    .winner_reply
-                    .and_then(|winner_reply_id| {
-                        // Find the tuple in the vector of replies
-                        self.replies
-                            .iter()
-                            .find(|(id, _)| *id == winner_reply_id)
-                            .and_then(|(_, reply)| {
-                                // Find the ActorId with the highest value in like history
-                                reply
-                                    .like_history
-                                    .iter()
-                                    .max_by_key(|&(_, likes)| *likes)
-                                    .map(|(actor_id, _)| *actor_id)
-                            })
-                    })
-            })
+        self.winner_reply_like_history
+            .iter()
+            .max_by_key(|&(_actor_id, likes_given)| *likes_given)
+            .map(|(actor_id, _likes_given)| *actor_id)
     }
 
     /// Finds a path from the start node to the winner reply node in the graph.
@@ -208,7 +218,7 @@ impl RewardLogicThread {
     /// ```
     pub fn find_path_winners(&self) -> Option<Vec<PostId>> {
         let start = self.thread_id.expect("Thread ID is not set.");
-        let target = self
+        let (target, _) = self
             .expired_thread_data
             .as_ref()
             .expect("Expired thread data is not set.")
@@ -249,25 +259,23 @@ impl RewardLogicThread {
 
         None
     }
+}
 
-    /// Finds a path from the start node to the winner reply node in the graph and retrieves the owners of the posts in the path.
+impl Default for RewardLogicThread {
+    /// Provides a default instance of `RewardLogicThread`.
     ///
-    /// Returns:
-    /// - `Some(Vec<ActorId>)`: A vector representing the owners of the posts along the path from the start node to the winner reply node,
-    ///                           where each element is an ActorId.
-    /// - `None`: If no path is found from the start node to the winner reply node.
-    pub fn find_path_winners_actors(&mut self) -> Option<Vec<ActorId>> {
-        self.find_path_winners().map(|path_winners_post_id| {
-            path_winners_post_id
-                .iter()
-                .filter_map(|post_id| {
-                    self.replies
-                        .iter()
-                        .find(|(id, _)| id == post_id)
-                        .map(|(_, reply)| reply.post_data.owner)
-                })
-                .collect()
-        })
+    /// # Returns
+    ///
+    /// A new instance of `RewardLogicThread` with all fields initialized to `None` or default values.
+    fn default() -> Self {
+        RewardLogicThread {
+            thread_id: None,
+            distributed_tokens: 0,
+            graph_rep: Vec::new(),
+            all_replies_with_likes: Vec::new(),
+            winner_reply_like_history: Vec::new(),
+            expired_thread_data: None,
+        }
     }
 }
 
@@ -275,7 +283,7 @@ pub struct ExpiredThread {
     pub top_liker_winner: Option<ActorId>,
     pub path_winners: Option<Vec<ActorId>>,
     pub transaction_log: Option<Vec<(ActorId, u64)>>,
-    pub winner_reply: Option<PostId>,
+    pub winner_reply: Option<(PostId, ActorId)>,
 }
 
 impl ExpiredThread {
@@ -302,7 +310,7 @@ pub enum RewardLogicAction {
     AddAddressFT(ActorId),
     AddAddressLogic(ActorId),
     AddAddressStorage(ActorId),
-    TriggerRewardLogic(Thread),
+    TriggerRewardLogic(PostId),
 }
 
 #[derive(Encode, Decode, TypeInfo)]

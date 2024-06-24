@@ -47,7 +47,10 @@ async fn main() {
             msg::reply(RewardLogicEvent::StorageAddressAdded, 0).expect("");
         }
 
-        RewardLogicAction::TriggerRewardLogic(thread) => RewardLogic::trigger_reward_logic(thread),
+        RewardLogicAction::TriggerRewardLogic(thread_id) => {
+            reward_logic.trigger_reward_logic(thread_id).await;
+            msg::reply(RewardLogicEvent::RewardLogicTriggered, 0).expect("");
+        }
     }
 }
 

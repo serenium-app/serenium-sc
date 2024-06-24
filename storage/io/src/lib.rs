@@ -134,7 +134,7 @@ pub enum StorageQuery {
 #[scale_info(crate = gstd::scale_info)]
 pub enum StorageQueryReply {
     // For winner (rule no. 1)
-    AllRepliesWithLikes(Vec<(PostId, u128)>),
+    AllRepliesWithLikes(Vec<(PostId, ActorId, u128)>),
     // For path to the winner (rule no. 2)
     GraphRep(Vec<(PostId, Vec<PostId>)>),
     // For top liker of winner (rule no. 3)
