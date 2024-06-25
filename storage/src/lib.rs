@@ -125,6 +125,18 @@ extern fn state() {
 
             StorageQueryReply::AllThreadsFE(threads_fe)
         }
+        StorageQuery::AllRepliesFE(thread_id) => {
+            let replies_fe: Vec<Post> = thread_storage
+                .threads
+                .get(&thread_id)
+                .expect("")
+                .replies
+                .iter()
+                .map(|(_post_id, thread_reply)| thread_reply.post_data.clone())
+                .collect();
+
+            StorageQueryReply::AllRepliesFE(replies_fe)
+        }
     };
     msg::reply(reply, 0).expect("Error in sharing state");
 }
