@@ -143,8 +143,8 @@ pub enum StorageQueryReply {
     LikeHistoryOf(Vec<(ActorId, u128)>),
     // Fetch all threads with the title, content, owner and a single reply
     AllThreadsFE(Vec<(Post, Post)>),
-    // Fetch all replies for a given thread in a post_data format
-    AllRepliesFE(Vec<Post>),
+    // Fetch all replies and the thread itself for a given thread in a post_data format
+    AllRepliesFE(Post, Vec<Post>),
 }
 
 pub struct ContractMetadata;
