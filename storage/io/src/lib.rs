@@ -4,8 +4,6 @@ use gmeta::{InOut, Metadata};
 use gstd::{collections::HashMap as GHashMap, msg, prelude::*, ActorId};
 use io::{Post, PostId, Thread, ThreadReply, ThreadStatus};
 
-pub type TinyReply = Post;
-
 #[derive(Default)]
 pub struct ThreadStorage {
     pub threads: GHashMap<PostId, Thread>,
@@ -127,6 +125,8 @@ pub enum StorageQuery {
     GraphRep(PostId),
     // For top liker of winner (rule no. 3)
     LikeHistoryOf(PostId, PostId),
+    // Fetch all threads with the title, content, owner and a single reply
+    AllThreadsFE,
 }
 
 #[derive(Encode, Decode, TypeInfo)]
@@ -139,6 +139,8 @@ pub enum StorageQueryReply {
     GraphRep(Vec<(PostId, Vec<PostId>)>),
     // For top liker of winner (rule no. 3)
     LikeHistoryOf(Vec<(ActorId, u128)>),
+    // Fetch all threads with the title, content, owner and a single reply
+    AllThreadsFE(Vec<(Post, Post)>),
 }
 
 pub struct ContractMetadata;

@@ -1,7 +1,7 @@
 #![no_std]
 
 use gstd::{msg, prelude::*, ActorId};
-use io::PostId;
+use io::{Post, PostId};
 use storage_io::{StorageAction, StorageEvent, StorageQuery, StorageQueryReply, ThreadStorage};
 
 static mut THREAD_STORAGE: Option<ThreadStorage> = None;
@@ -107,6 +107,23 @@ extern fn state() {
                 .and_then(|thread| thread.replies.iter().find(|(id, _)| *id == reply_id))
                 .map(|(_, reply)| &reply.like_history);
             StorageQueryReply::LikeHistoryOf(like_history.unwrap().clone())
+        }
+        StorageQuery::AllThreadsFE => {
+            let threads_fe: Vec<(Post, Post)> = thread_storage
+                .threads
+                .iter()
+                .map(|(post_id, thread)| {
+                    let featured_reply_fe = thread_storage
+                        .get_featured_reply(*post_id)
+                        .expect("")
+                        .post_data
+                        .clone();
+
+                    (thread.post_data.clone(), featured_reply_fe)
+                })
+                .collect();
+
+            StorageQueryReply::AllThreadsFE(threads_fe)
         }
     };
     msg::reply(reply, 0).expect("Error in sharing state");
