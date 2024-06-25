@@ -140,7 +140,7 @@ pub enum StorageQueryReply {
     // For top liker of winner (rule no. 3)
     LikeHistoryOf(Vec<(ActorId, u128)>),
     // Fetch all threads with the title, content, owner and a single reply
-    AllThreadsFE(Vec<Post>),
+    AllThreadsFE(Vec<(Post, Post)>),
 }
 
 pub struct ContractMetadata;
