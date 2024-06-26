@@ -3,6 +3,7 @@
 use gmeta::{InOut, Metadata, Out};
 use gstd::{collections::HashMap as GHashMap, msg, prelude::*, ActorId};
 use io::PostId;
+use sharded_fungible_token_io::{FTokenEvent, LogicAction};
 use storage_io::{StorageQuery, StorageQueryReply};
 
 #[derive(Default, Encode, Decode, TypeInfo)]
@@ -259,6 +260,46 @@ impl RewardLogicThread {
 
         None
     }
+
+    pub async fn transfer_tokens(
+        &mut self,
+        ft_address_id: ActorId,
+        amount: u128,
+        sender: ActorId,
+        recipient: ActorId,
+    ) -> Result<(), ()> {
+        let res = msg::send_for_reply_as::<_, FTokenEvent>(
+            ft_address_id,
+            LogicAction::Transfer {
+                sender,
+                recipient,
+                amount,
+            },
+            0,
+            0,
+        )
+        .expect("")
+        .await;
+
+        match res {
+            Ok(event) => match event {
+                FTokenEvent::Ok => Ok(()),
+                _ => Err(()),
+            },
+            Err(_) => Err(()),
+        }
+    }
+
+    // pub async fn distribute_rewards(&mut self, address_ft: ActorId) {
+    //     let (_reply_id, actor_id) = self
+    //         .expired_thread_data
+    //         .as_ref()
+    //         .expect("")
+    //         .winner_reply
+    //         .expect("");
+    //     // Distribute reward to winner reply
+    //     self.transfer_tokens(address_ft).unwrap()
+    // }
 }
 
 impl Default for RewardLogicThread {
