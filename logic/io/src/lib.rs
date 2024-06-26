@@ -221,13 +221,14 @@ impl ThreadLogic {
         }
     }
 
-    pub async fn expire_thread(&mut self, _thread_id: PostId) {
-        // TODO: Send msg to reward logic contract to trigger reward calculations and FT transfers
-        // Function send_trigger_reward_msg
+    pub async fn expire_thread(&mut self, thread_id: PostId) {
+        // self.send_trigger_reward_msg(thread_id).await.unwrap();
 
         // Only when reward logic has been successful, change state
         // TODO: Send msg to storage contract to change state
-        // Function send_thread_status_expired_msg
+        self.send_thread_status_expired_msg(thread_id)
+            .await
+            .unwrap();
     }
 }
 
