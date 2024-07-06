@@ -144,6 +144,15 @@ extern fn state() {
 
             StorageQueryReply::AllRepliesFE(thread_fe, replies_fe)
         }
+        StorageQuery::DistributedTokens(thread_id) => {
+            let distributed_tokens: u128 = thread_storage
+                .threads
+                .get(&thread_id)
+                .expect("")
+                .distributed_tokens;
+
+            StorageQueryReply::DistributedTokens(distributed_tokens)
+        }
     };
     msg::reply(reply, 0).expect("Error in sharing state");
 }

@@ -129,6 +129,8 @@ pub enum StorageQuery {
     AllThreadsFE,
     // Fetch all replies for a given thread in a post_data format
     AllRepliesFE(PostId),
+    // Fetch the distributed tokens for a given thread
+    DistributedTokens(PostId),
 }
 
 #[derive(Encode, Decode, TypeInfo)]
@@ -145,6 +147,7 @@ pub enum StorageQueryReply {
     AllThreadsFE(Vec<(Post, Post)>),
     // Fetch all replies and the thread itself for a given thread in a post_data format
     AllRepliesFE(Post, Vec<Post>),
+    DistributedTokens(u128),
 }
 
 pub struct ContractMetadata;

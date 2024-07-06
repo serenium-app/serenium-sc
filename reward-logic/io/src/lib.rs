@@ -168,6 +168,12 @@ impl RewardLogicThread {
             .await
             .expect("Error in fetching thread's graph rep");
 
+        // Find path winners
+
+        // Fetch distributed tokens
+
+        // Calculate and distribute rewards
+
         reward_logic_thread
     }
 
