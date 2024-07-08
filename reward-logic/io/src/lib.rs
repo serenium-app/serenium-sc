@@ -166,7 +166,7 @@ impl RewardLogicThread {
             .winner_reply = reward_logic_thread.find_winner_reply();
 
         // Fetch like history of winner reply
-        let (reply_id, _) = reward_logic_thread
+        let (reply_id, _, _) = reward_logic_thread
             .expired_thread_data
             .as_mut()
             .expect("")
@@ -203,11 +203,11 @@ impl RewardLogicThread {
         self.expired_thread_data = Some(expired_thread_data);
     }
 
-    pub fn find_winner_reply(&self) -> Option<(PostId, ActorId)> {
+    pub fn find_winner_reply(&self) -> Option<(PostId, ActorId, u128)> {
         self.all_replies_with_likes
             .iter()
             .max_by_key(|(_, _, likes)| likes)
-            .map(|(reply_id, actor_id, _)| (*reply_id, *actor_id)) // Return the PostId and ActorId of the winning reply
+            .map(|(reply_id, actor_id, _)| (*reply_id, *actor_id, 0)) // Return the PostId and ActorId of the winning reply
     }
 
     /// Finds the `ActorId` of the actor who has given the most likes to the winner has given the most likes.
@@ -222,11 +222,11 @@ impl RewardLogicThread {
     /// - `None`: If the `winner_reply_like_history` collection is empty.
     ///
     /// ```
-    pub fn find_top_liker_winner(&mut self) -> Option<ActorId> {
+    pub fn find_top_liker_winner(&mut self) -> Option<(ActorId, u128)> {
         self.winner_reply_like_history
             .iter()
             .max_by_key(|&(_actor_id, likes_given)| *likes_given)
-            .map(|(actor_id, _likes_given)| *actor_id)
+            .map(|(actor_id, _likes_given)| (*actor_id, 0))
     }
 
     /// Finds a path from the start node to the winner reply node in the graph.
@@ -246,7 +246,7 @@ impl RewardLogicThread {
     /// ```
     pub fn find_path_winners(&self) -> Option<Vec<PostId>> {
         let start = self.thread_id.expect("Thread ID is not set.");
-        let (target, _) = self
+        let (target, _, _) = self
             .expired_thread_data
             .as_ref()
             .expect("Expired thread data is not set.")
@@ -348,10 +348,10 @@ impl Default for RewardLogicThread {
 }
 
 pub struct ExpiredThread {
-    pub top_liker_winner: Option<ActorId>,
-    pub path_winners: Option<Vec<ActorId>>,
-    pub transaction_log: Option<Vec<(ActorId, u64)>>,
-    pub winner_reply: Option<(PostId, ActorId)>,
+    pub top_liker_winner: Option<(ActorId, u128)>,
+    pub path_winners: Option<(Vec<ActorId>, u128)>,
+    pub transaction_log: Option<Vec<(ActorId, u128)>>,
+    pub winner_reply: Option<(PostId, ActorId, u128)>,
 }
 
 impl ExpiredThread {
