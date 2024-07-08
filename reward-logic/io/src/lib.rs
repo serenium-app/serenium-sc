@@ -95,6 +95,27 @@ impl RewardLogic {
         }
     }
 
+    pub async fn fetch_distributed_tokens(&mut self, thread_id: PostId) -> Option<u128> {
+        let res = msg::send_for_reply_as::<_, StorageQueryReply>(
+            self.address_storage.expect(""),
+            StorageQuery::DistributedTokens(thread_id),
+            0,
+            0,
+        )
+        .expect("")
+        .await;
+
+        match res {
+            Ok(event) => match event {
+                StorageQueryReply::DistributedTokens(distributed_tokens) => {
+                    Some(distributed_tokens)
+                }
+                _ => None,
+            },
+            Err(_) => None,
+        }
+    }
+
     pub async fn trigger_reward_logic(&mut self, thread_id: PostId) {
         let _reward_logic_thread = RewardLogicThread::new(self, thread_id).await;
     }
@@ -167,6 +188,12 @@ impl RewardLogicThread {
             .fetch_graph_rep(thread_id)
             .await
             .expect("Error in fetching thread's graph rep");
+
+        // Find path winners
+
+        // Fetch distributed tokens
+
+        // Calculate and distribute rewards
 
         reward_logic_thread
     }
