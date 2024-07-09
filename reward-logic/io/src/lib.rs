@@ -153,6 +153,12 @@ impl RewardLogicThread {
 
         reward_logic_thread.set_expired_thread_data();
 
+        // Fetch distributed tokens
+        reward_logic_thread.distributed_tokens = self_ref
+            .fetch_distributed_tokens(thread_id)
+            .await
+            .expect("Error in fetching the distributed tokens");
+
         // Fetch reward logic thread data here
         reward_logic_thread.all_replies_with_likes = self_ref
             .fetch_all_replies_with_likes(thread_id)
@@ -190,10 +196,13 @@ impl RewardLogicThread {
             .expect("Error in fetching thread's graph rep");
 
         // Find path winners
+        // reward_logic_thread
+        //     .expired_thread_data
+        //     .as_mut()
+        //     .expect("")
+        //     .path_winners = reward_logic_thread.find_path_winners_tokens();
 
-        // Fetch distributed tokens
-
-        // Calculate and distribute rewards
+        // Distribute rewards
 
         reward_logic_thread
     }
@@ -204,10 +213,12 @@ impl RewardLogicThread {
     }
 
     pub fn find_winner_reply(&self) -> Option<(PostId, ActorId, u128)> {
+        let tokens = (self.distributed_tokens * 4) / 10;
+
         self.all_replies_with_likes
             .iter()
             .max_by_key(|(_, _, likes)| likes)
-            .map(|(reply_id, actor_id, _)| (*reply_id, *actor_id, 0)) // Return the PostId and ActorId of the winning reply
+            .map(|(reply_id, actor_id, _)| (*reply_id, *actor_id, tokens)) // Return the PostId and ActorId of the winning reply
     }
 
     /// Finds the `ActorId` of the actor who has given the most likes to the winner has given the most likes.
@@ -223,10 +234,12 @@ impl RewardLogicThread {
     ///
     /// ```
     pub fn find_top_liker_winner(&mut self) -> Option<(ActorId, u128)> {
+        let tokens = (self.distributed_tokens * 3) / 10;
+
         self.winner_reply_like_history
             .iter()
             .max_by_key(|&(_actor_id, likes_given)| *likes_given)
-            .map(|(actor_id, _likes_given)| (*actor_id, 0))
+            .map(|(actor_id, _likes_given)| (*actor_id, tokens))
     }
 
     /// Finds a path from the start node to the winner reply node in the graph.
@@ -246,7 +259,7 @@ impl RewardLogicThread {
     /// ```
     pub fn find_path_winners(&self) -> Option<Vec<PostId>> {
         let start = self.thread_id.expect("Thread ID is not set.");
-        let (target, _, _) = self
+        let (target, _target_actor, _) = self
             .expired_thread_data
             .as_ref()
             .expect("Expired thread data is not set.")
@@ -286,6 +299,12 @@ impl RewardLogicThread {
         }
 
         None
+    }
+
+    pub fn find_path_winners_tokens(&self) -> Option<(Vec<PostId>, u128)> {
+        let path_winners: Vec<PostId> = self.find_path_winners().expect("");
+        let tokens: u128 = ((self.distributed_tokens * 3) / 10) / path_winners.len() as u128;
+        Some((path_winners, tokens))
     }
 
     pub async fn transfer_tokens(
