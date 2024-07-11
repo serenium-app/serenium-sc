@@ -2,7 +2,7 @@
 
 use gmeta::{InOut, Metadata, Out};
 use gstd::{collections::HashMap as GHashMap, msg, prelude::*, ActorId};
-use io::PostId;
+use io::{PostId, ThreadNode};
 use sharded_fungible_token_io::{FTokenEvent, LogicAction};
 use storage_io::{StorageQuery, StorageQueryReply};
 
@@ -53,7 +53,7 @@ impl RewardLogic {
     pub async fn fetch_graph_rep(
         &mut self,
         thread_id: PostId,
-    ) -> Option<Vec<(PostId, Vec<PostId>)>> {
+    ) -> Option<Vec<(ThreadNode, Vec<ThreadNode>)>> {
         let res = msg::send_for_reply_as::<_, StorageQueryReply>(
             self.address_storage.expect(""),
             StorageQuery::GraphRep(thread_id),
@@ -124,7 +124,7 @@ impl RewardLogic {
 pub struct RewardLogicThread {
     pub thread_id: Option<PostId>,
     pub distributed_tokens: u128,
-    pub graph_rep: Vec<(PostId, Vec<PostId>)>,
+    pub graph_rep: Vec<(ThreadNode, Vec<ThreadNode>)>,
     pub all_replies_with_likes: Vec<(PostId, ActorId, u128)>,
     pub winner_reply_like_history: Vec<(ActorId, u128)>,
     pub expired_thread_data: Option<ExpiredThread>,
@@ -196,11 +196,11 @@ impl RewardLogicThread {
             .expect("Error in fetching thread's graph rep");
 
         // Find path winners
-        // reward_logic_thread
-        //     .expired_thread_data
-        //     .as_mut()
-        //     .expect("")
-        //     .path_winners = reward_logic_thread.find_path_winners_tokens();
+        reward_logic_thread
+            .expired_thread_data
+            .as_mut()
+            .expect("")
+            .path_winners = reward_logic_thread.find_path_winners_tokens();
 
         // Distribute rewards
 
@@ -242,39 +242,39 @@ impl RewardLogicThread {
             .map(|(actor_id, _likes_given)| (*actor_id, tokens))
     }
 
-    /// Finds a path from the start node to the winner reply node in the graph.
-    ///
-    /// Returns:
-    /// - `Some(Vec<PostId>)`: A vector representing the path from the start node to the winner reply node,
-    ///                          where each element is a PostId.
-    /// - `None`: If no path is found from the start node to the winner reply node.
-    ///
-    /// # Panics
-    ///
-    /// This method will panic if:
-    /// - `thread_id` is None, indicating that the start node is not set.
-    /// - `expired_thread_data` is None, indicating that the winner reply node is not set.
-    /// - `winner_reply` within `expired_thread_data` is None, indicating that the winner reply node is not set.
-    ///
-    /// ```
-    pub fn find_path_winners(&self) -> Option<Vec<PostId>> {
-        let start = self.thread_id.expect("Thread ID is not set.");
-        let (target, _target_actor, _) = self
+    pub fn find_path_winners(&self) -> Option<Vec<ThreadNode>> {
+        let start_post_id = self.thread_id.expect("Thread ID is not set.");
+        let (target_post_id, _, _) = self
             .expired_thread_data
             .as_ref()
             .expect("Expired thread data is not set.")
             .winner_reply
             .expect("Winner reply is not set.");
 
+        // Find the start and target nodes based on PostId
+        let start_node = self
+            .graph_rep
+            .iter()
+            .map(|(node, _)| node)
+            .find(|(post_id, _)| *post_id == start_post_id)
+            .expect("Start node not found in the graph");
+
+        let target_node = self
+            .graph_rep
+            .iter()
+            .map(|(node, _)| node)
+            .find(|(post_id, _)| *post_id == target_post_id)
+            .expect("Target node not found in the graph");
+
         let mut visited = collections::HashSet::new();
         let mut queue = collections::VecDeque::new();
         let mut path = GHashMap::new();
 
-        queue.push_back(start);
-        visited.insert(start);
+        queue.push_back(*start_node);
+        visited.insert(*start_node);
 
         while let Some(node) = queue.pop_front() {
-            if node == target {
+            if node == *target_node {
                 // Reconstruct path
                 let mut current = node;
                 let mut result = Vec::new();
@@ -282,7 +282,7 @@ impl RewardLogicThread {
                     result.push(current);
                     current = prev;
                 }
-                result.push(start);
+                result.push(*start_node);
                 result.reverse();
                 return Some(result);
             }
@@ -301,8 +301,8 @@ impl RewardLogicThread {
         None
     }
 
-    pub fn find_path_winners_tokens(&self) -> Option<(Vec<PostId>, u128)> {
-        let path_winners: Vec<PostId> = self.find_path_winners().expect("");
+    pub fn find_path_winners_tokens(&self) -> Option<(Vec<ThreadNode>, u128)> {
+        let path_winners: Vec<ThreadNode> = self.find_path_winners().expect("");
         let tokens: u128 = ((self.distributed_tokens * 3) / 10) / path_winners.len() as u128;
         Some((path_winners, tokens))
     }
@@ -368,7 +368,7 @@ impl Default for RewardLogicThread {
 
 pub struct ExpiredThread {
     pub top_liker_winner: Option<(ActorId, u128)>,
-    pub path_winners: Option<(Vec<ActorId>, u128)>,
+    pub path_winners: Option<(Vec<ThreadNode>, u128)>,
     pub transaction_log: Option<Vec<(ActorId, u128)>>,
     pub winner_reply: Option<(PostId, ActorId, u128)>,
 }

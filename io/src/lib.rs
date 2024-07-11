@@ -6,6 +6,8 @@ pub type PostId = u32;
 pub type Timestamp = u64;
 pub type URL = String;
 
+pub type ThreadNode = (PostId, ActorId);
+
 #[derive(Encode, Decode, TypeInfo, Clone)]
 #[codec(crate = gstd::codec)]
 #[scale_info(crate = gstd::scale_info)]
@@ -94,7 +96,7 @@ pub struct Thread {
     pub thread_status: ThreadStatus,
     pub thread_type: ThreadType,
     pub distributed_tokens: u128,
-    pub graph_rep: Vec<(PostId, Vec<PostId>)>,
+    pub graph_rep: Vec<(ThreadNode, Vec<ThreadNode>)>,
 }
 
 #[derive(Encode, Decode, TypeInfo, Clone)]

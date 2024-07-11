@@ -2,7 +2,7 @@
 
 use gmeta::{InOut, Metadata};
 use gstd::{collections::HashMap as GHashMap, msg, prelude::*, ActorId};
-use io::{Post, PostId, Thread, ThreadReply, ThreadStatus};
+use io::{Post, PostId, Thread, ThreadNode, ThreadReply, ThreadStatus};
 
 #[derive(Default)]
 pub struct ThreadStorage {
@@ -140,7 +140,7 @@ pub enum StorageQueryReply {
     // For winner (rule no. 1)
     AllRepliesWithLikes(Vec<(PostId, ActorId, u128)>),
     // For path to the winner (rule no. 2)
-    GraphRep(Vec<(PostId, Vec<PostId>)>),
+    GraphRep(Vec<(ThreadNode, Vec<ThreadNode>)>),
     // For top liker of winner (rule no. 3)
     LikeHistoryOf(Vec<(ActorId, u128)>),
     // Fetch all threads with the title, content, owner and a single reply
