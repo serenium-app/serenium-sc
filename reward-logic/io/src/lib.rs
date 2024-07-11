@@ -2,7 +2,7 @@
 
 use gmeta::{InOut, Metadata, Out};
 use gstd::{collections::HashMap as GHashMap, msg, prelude::*, ActorId};
-use io::{PostId, ThreadNode};
+use io::{PostId, ThreadGraph, ThreadNode};
 use sharded_fungible_token_io::{FTokenEvent, LogicAction};
 use storage_io::{StorageQuery, StorageQueryReply};
 
@@ -50,10 +50,7 @@ impl RewardLogic {
         }
     }
 
-    pub async fn fetch_graph_rep(
-        &mut self,
-        thread_id: PostId,
-    ) -> Option<Vec<(ThreadNode, Vec<ThreadNode>)>> {
+    pub async fn fetch_graph_rep(&mut self, thread_id: PostId) -> Option<ThreadGraph> {
         let res = msg::send_for_reply_as::<_, StorageQueryReply>(
             self.address_storage.expect(""),
             StorageQuery::GraphRep(thread_id),
@@ -124,7 +121,7 @@ impl RewardLogic {
 pub struct RewardLogicThread {
     pub thread_id: Option<PostId>,
     pub distributed_tokens: u128,
-    pub graph_rep: Vec<(ThreadNode, Vec<ThreadNode>)>,
+    pub graph_rep: ThreadGraph,
     pub all_replies_with_likes: Vec<(PostId, ActorId, u128)>,
     pub winner_reply_like_history: Vec<(ActorId, u128)>,
     pub expired_thread_data: Option<ExpiredThread>,
@@ -145,7 +142,7 @@ impl RewardLogicThread {
         let mut reward_logic_thread = RewardLogicThread {
             thread_id: Some(thread_id),
             distributed_tokens: 0,
-            graph_rep: Vec::new(),
+            graph_rep: ThreadGraph::default(),
             all_replies_with_likes: Vec::new(),
             winner_reply_like_history: Vec::new(),
             expired_thread_data: None,
@@ -254,6 +251,7 @@ impl RewardLogicThread {
         // Find the start and target nodes based on PostId
         let start_node = self
             .graph_rep
+            .graph
             .iter()
             .map(|(node, _)| node)
             .find(|(post_id, _)| *post_id == start_post_id)
@@ -261,6 +259,7 @@ impl RewardLogicThread {
 
         let target_node = self
             .graph_rep
+            .graph
             .iter()
             .map(|(node, _)| node)
             .find(|(post_id, _)| *post_id == target_post_id)
@@ -288,7 +287,7 @@ impl RewardLogicThread {
             }
 
             // Retrieve neighbors from the adjacency list
-            if let Some((_, neighbors)) = self.graph_rep.iter().find(|(id, _)| *id == node) {
+            if let Some((_, neighbors)) = self.graph_rep.graph.iter().find(|(id, _)| *id == node) {
                 for &neighbor in neighbors {
                     if visited.insert(neighbor) {
                         queue.push_back(neighbor);
@@ -358,7 +357,7 @@ impl Default for RewardLogicThread {
         RewardLogicThread {
             thread_id: None,
             distributed_tokens: 0,
-            graph_rep: Vec::new(),
+            graph_rep: ThreadGraph::default(),
             all_replies_with_likes: Vec::new(),
             winner_reply_like_history: Vec::new(),
             expired_thread_data: None,

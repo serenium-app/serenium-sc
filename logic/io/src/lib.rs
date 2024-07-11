@@ -116,7 +116,7 @@ impl ThreadLogic {
         };
     }
 
-    pub async fn add_reply(&mut self, init_reply: InitReply) {
+    pub async fn add_reply(&mut self, init_reply: InitReply, ref_node: PostId) {
         let post = Post::new(init_reply.title, init_reply.content, init_reply.photo_url);
 
         let reply = ThreadReply {
@@ -137,7 +137,7 @@ impl ThreadLogic {
 
         let res = msg::send_for_reply_as::<_, StorageEvent>(
             self.address_storage.expect(""),
-            StorageAction::PushReply(reply.post_data.post_id, reply),
+            StorageAction::PushReply(reply.post_data.post_id, reply, ref_node),
             0,
             0,
         )
@@ -240,7 +240,7 @@ pub enum ThreadLogicAction {
     AddAddressStorage(ActorId),
     AddAddressRewardLogic(ActorId),
     NewThread(InitThread),
-    AddReply(InitReply),
+    AddReply(InitReply, PostId),
     LikeReply(PostId, PostId, u128),
     ExpireThread(PostId),
 }

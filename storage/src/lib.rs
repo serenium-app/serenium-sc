@@ -39,9 +39,9 @@ extern fn handle() {
             msg::reply(StorageEvent::ThreadPush(thread_id), 0)
                 .expect("Failed to reply to PushThread Action");
         }
-        StorageAction::PushReply(thread_id, reply) => {
+        StorageAction::PushReply(thread_id, reply, ref_node) => {
             let reply_id = reply.post_data.post_id;
-            thread_storage.push_reply(thread_id, reply);
+            thread_storage.push_reply(thread_id, reply, ref_node);
             msg::reply(StorageEvent::ReplyPush(reply_id), 0)
                 .expect("Failed to reply to PushReply Action");
         }

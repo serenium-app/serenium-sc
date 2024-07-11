@@ -2,7 +2,7 @@
 
 use gmeta::{InOut, Metadata};
 use gstd::{collections::HashMap as GHashMap, msg, prelude::*, ActorId};
-use io::{Post, PostId, Thread, ThreadNode, ThreadReply, ThreadStatus};
+use io::{Post, PostId, Thread, ThreadGraph, ThreadNode, ThreadReply, ThreadStatus};
 
 #[derive(Default)]
 pub struct ThreadStorage {
@@ -24,8 +24,12 @@ impl ThreadStorage {
         self.threads.insert(thread.post_data.post_id, thread);
     }
 
-    pub fn push_reply(&mut self, thread_id: PostId, reply: ThreadReply) {
+    pub fn push_reply(&mut self, thread_id: PostId, reply: ThreadReply, ref_node: PostId) {
         if let Some(thread) = self.threads.get_mut(&thread_id) {
+            // Push to graph_rep
+            let new_node: ThreadNode = (reply.post_data.post_id, reply.post_data.owner);
+            thread.graph_rep.add_edge(ref_node, new_node);
+
             thread.replies.push((reply.post_data.post_id, reply));
         }
     }
@@ -94,7 +98,7 @@ impl ThreadStorage {
 pub enum StorageAction {
     AddLogicContractAddress(ActorId),
     PushThread(Thread),
-    PushReply(PostId, ThreadReply),
+    PushReply(PostId, ThreadReply, PostId),
     LikeReply(PostId, PostId, u128),
     ChangeStatusState(PostId),
     RemoveThread(PostId),
@@ -140,7 +144,7 @@ pub enum StorageQueryReply {
     // For winner (rule no. 1)
     AllRepliesWithLikes(Vec<(PostId, ActorId, u128)>),
     // For path to the winner (rule no. 2)
-    GraphRep(Vec<(ThreadNode, Vec<ThreadNode>)>),
+    GraphRep(ThreadGraph),
     // For top liker of winner (rule no. 3)
     LikeHistoryOf(Vec<(ActorId, u128)>),
     // Fetch all threads with the title, content, owner and a single reply
