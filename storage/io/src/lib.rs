@@ -73,6 +73,8 @@ impl ThreadStorage {
         if let Some(thread) = self.threads.get_mut(&thread_id) {
             if let Some(index) = thread.replies.iter().position(|(id, _)| *id == reply_id) {
                 thread.replies.remove(index);
+                // delete reply from graph
+                thread.graph_rep.remove_node(reply_id);
             } else {
                 // Optionally handle the case where the reply does not exist
             }

@@ -143,6 +143,16 @@ impl ThreadGraph {
         // If the node does not exist, add it with an empty adjacency list
         self.graph.push((node, Vec::new()));
     }
+
+    pub fn remove_node(&mut self, post_id_to_remove: PostId) {
+        // Remove the node from any adjacency lists
+        for (_, adj_list) in &mut self.graph {
+            adj_list.retain(|node| node.0 != post_id_to_remove);
+        }
+
+        // Remove the node itself along with its adjacency list
+        self.graph.retain(|(node, _)| node.0 != post_id_to_remove);
+    }
 }
 
 impl Default for ThreadGraph {
