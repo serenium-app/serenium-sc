@@ -222,10 +222,9 @@ impl ThreadLogic {
     }
 
     pub async fn expire_thread(&mut self, thread_id: PostId) {
-        // self.send_trigger_reward_msg(thread_id).await.unwrap();
+        self.send_trigger_reward_msg(thread_id).await.unwrap();
 
         // Only when reward logic has been successful, change state
-        // TODO: Send msg to storage contract to change state
         self.send_thread_status_expired_msg(thread_id)
             .await
             .unwrap();

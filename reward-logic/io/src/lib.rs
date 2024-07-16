@@ -200,6 +200,13 @@ impl RewardLogicThread {
             .path_winners = reward_logic_thread.find_path_winners_tokens();
 
         // Distribute rewards
+        reward_logic_thread
+            .distribute_rewards(
+                self_ref.address_ft.unwrap(),
+                self_ref.address_storage.unwrap(),
+                self_ref.admin.unwrap(),
+            )
+            .await;
 
         reward_logic_thread
     }
@@ -210,7 +217,7 @@ impl RewardLogicThread {
     }
 
     pub fn find_winner_reply(&self) -> Option<(PostId, ActorId, u128)> {
-        let tokens = (self.distributed_tokens * 4) / 10;
+        let tokens = (self.distributed_tokens * 3) / 10;
 
         self.all_replies_with_likes
             .iter()
@@ -231,7 +238,7 @@ impl RewardLogicThread {
     ///
     /// ```
     pub fn find_top_liker_winner(&mut self) -> Option<(ActorId, u128)> {
-        let tokens = (self.distributed_tokens * 3) / 10;
+        let tokens = (self.distributed_tokens * 2) / 10;
 
         self.winner_reply_like_history
             .iter()
@@ -302,7 +309,7 @@ impl RewardLogicThread {
 
     pub fn find_path_winners_tokens(&self) -> Option<(Vec<ThreadNode>, u128)> {
         let path_winners: Vec<ThreadNode> = self.find_path_winners().expect("");
-        let tokens: u128 = ((self.distributed_tokens * 3) / 10) / path_winners.len() as u128;
+        let tokens: u128 = ((self.distributed_tokens * 4) / 10) / path_winners.len() as u128;
         Some((path_winners, tokens))
     }
 
@@ -335,16 +342,65 @@ impl RewardLogicThread {
         }
     }
 
-    // pub async fn distribute_rewards(&mut self, address_ft: ActorId) {
-    //     let (_reply_id, actor_id) = self
-    //         .expired_thread_data
-    //         .as_ref()
-    //         .expect("")
-    //         .winner_reply
-    //         .expect("");
-    //     // Distribute reward to winner reply
-    //     self.transfer_tokens(address_ft).unwrap()
-    // }
+    pub async fn distribute_rewards(
+        &mut self,
+        address_ft: ActorId,
+        address_storage: ActorId,
+        address_serenium: ActorId,
+    ) {
+        let (_reply_id, winner_reply_actor_id, amount) = self
+            .expired_thread_data
+            .as_ref()
+            .expect("")
+            .winner_reply
+            .expect("");
+        // Distribute reward to winner reply
+        self.transfer_tokens(address_ft, amount, address_storage, winner_reply_actor_id)
+            .await
+            .unwrap();
+
+        // Distribute rewards to path winners
+        if let Some((path_winners, amount_path)) =
+            &self.expired_thread_data.as_ref().expect("").path_winners
+        {
+            let path_winners = path_winners.clone(); // Clone the vector to work with it independently
+            let amount_path = *amount_path;
+
+            for (_post_id, actor_id) in path_winners {
+                self.transfer_tokens(address_ft, amount_path, address_storage, actor_id)
+                    .await
+                    .unwrap();
+            }
+        }
+
+        // Distribute rewards to top_liker_winner
+        let (top_liker_winner_actor_id, amount_top_liker_winner) = self
+            .expired_thread_data
+            .as_ref()
+            .expect("")
+            .top_liker_winner
+            .expect("");
+
+        self.transfer_tokens(
+            address_ft,
+            amount_top_liker_winner,
+            address_storage,
+            top_liker_winner_actor_id,
+        )
+        .await
+        .unwrap();
+
+        // Transfer Serenium commission
+        let serenium_tokens = self.distributed_tokens / 10;
+        self.transfer_tokens(
+            address_ft,
+            serenium_tokens,
+            address_storage,
+            address_serenium,
+        )
+        .await
+        .expect("Error in transfering tokens to Serenium address");
+    }
 }
 
 impl Default for RewardLogicThread {
