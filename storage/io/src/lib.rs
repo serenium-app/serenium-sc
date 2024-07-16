@@ -75,11 +75,7 @@ impl ThreadStorage {
                 thread.replies.remove(index);
                 // delete reply from graph
                 thread.graph_rep.remove_node(reply_id);
-            } else {
-                // Optionally handle the case where the reply does not exist
             }
-        } else {
-            // Optionally handle the case where the thread does not exist
         }
     }
 
