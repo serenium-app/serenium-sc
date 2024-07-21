@@ -2,7 +2,7 @@
 
 use gmeta::{InOut, Metadata};
 use gstd::{collections::HashMap as GHashMap, msg, prelude::*, ActorId};
-use io::{Post, PostId, Thread, ThreadGraph, ThreadNode, ThreadReply, ThreadStatus};
+use io::{Post, PostId, Thread, ThreadGraph, ThreadNode, ThreadReply, ThreadStatus, ThreadType};
 
 #[derive(Default)]
 pub struct ThreadStorage {
@@ -150,10 +150,19 @@ pub enum StorageQueryReply {
     // For top liker of winner (rule no. 3)
     LikeHistoryOf(Vec<(ActorId, u128)>),
     // Fetch all threads with the title, content, owner and a single reply
-    AllThreadsFE(Vec<(Post, Option<Post>)>),
+    AllThreadsFE(Vec<(QueryThread, Option<Post>)>),
     // Fetch all replies and the thread itself for a given thread in a post_data format
     AllRepliesFE(Post, Vec<Post>),
     DistributedTokens(u128),
+}
+
+#[derive(Encode, Decode, TypeInfo)]
+#[codec(crate = gstd::codec)]
+#[scale_info(crate = gstd::scale_info)]
+pub struct QueryThread {
+    pub post_data: Post,
+    pub thread_type: ThreadType,
+    pub thread_status: ThreadStatus,
 }
 
 pub struct ContractMetadata;
