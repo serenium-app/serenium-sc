@@ -2,7 +2,9 @@
 
 use gstd::{msg, prelude::*, ActorId};
 use io::{Post, PostId};
-use storage_io::{StorageAction, StorageEvent, StorageQuery, StorageQueryReply, ThreadStorage};
+use storage_io::{
+    QueryThread, StorageAction, StorageEvent, StorageQuery, StorageQueryReply, ThreadStorage,
+};
 
 static mut THREAD_STORAGE: Option<ThreadStorage> = None;
 
@@ -109,7 +111,7 @@ extern fn state() {
             StorageQueryReply::LikeHistoryOf(like_history.unwrap().clone())
         }
         StorageQuery::AllThreadsFE => {
-            let threads_fe: Vec<(Post, Option<Post>)> = thread_storage
+            let threads_fe: Vec<(QueryThread, Option<Post>)> = thread_storage
                 .threads
                 .iter()
                 .map(|(post_id, thread)| {
@@ -117,7 +119,13 @@ extern fn state() {
                         .get_featured_reply(*post_id)
                         .map(|reply| reply.post_data.clone());
 
-                    (thread.post_data.clone(), featured_reply_fe)
+                    let query_thread: QueryThread = QueryThread {
+                        post_data: thread.post_data.clone(),
+                        thread_type: thread.thread_type.clone(),
+                        thread_status: thread.thread_status.clone(),
+                    };
+
+                    (query_thread, featured_reply_fe)
                 })
                 .collect();
 
