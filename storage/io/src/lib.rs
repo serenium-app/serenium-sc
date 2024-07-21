@@ -81,11 +81,15 @@ impl ThreadStorage {
 
     pub fn get_featured_reply(&self, thread_id: PostId) -> Option<&ThreadReply> {
         self.threads.get(&thread_id).and_then(|thread| {
-            thread
-                .replies
-                .iter()
-                .min_by_key(|(_, reply)| reply.likes)
-                .map(|(_, reply)| reply)
+            if thread.replies.is_empty() {
+                None
+            } else {
+                thread
+                    .replies
+                    .iter()
+                    .min_by_key(|(_, reply)| reply.likes)
+                    .map(|(_, reply)| reply)
+            }
         })
     }
 }
@@ -146,7 +150,7 @@ pub enum StorageQueryReply {
     // For top liker of winner (rule no. 3)
     LikeHistoryOf(Vec<(ActorId, u128)>),
     // Fetch all threads with the title, content, owner and a single reply
-    AllThreadsFE(Vec<(Post, Post)>),
+    AllThreadsFE(Vec<(Post, Option<Post>)>),
     // Fetch all replies and the thread itself for a given thread in a post_data format
     AllRepliesFE(Post, Vec<Post>),
     DistributedTokens(u128),

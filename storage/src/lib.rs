@@ -109,15 +109,13 @@ extern fn state() {
             StorageQueryReply::LikeHistoryOf(like_history.unwrap().clone())
         }
         StorageQuery::AllThreadsFE => {
-            let threads_fe: Vec<(Post, Post)> = thread_storage
+            let threads_fe: Vec<(Post, Option<Post>)> = thread_storage
                 .threads
                 .iter()
                 .map(|(post_id, thread)| {
                     let featured_reply_fe = thread_storage
                         .get_featured_reply(*post_id)
-                        .expect("")
-                        .post_data
-                        .clone();
+                        .map(|reply| reply.post_data.clone());
 
                     (thread.post_data.clone(), featured_reply_fe)
                 })
