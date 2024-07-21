@@ -4,6 +4,15 @@ use gmeta::{InOut, Metadata};
 use gstd::{collections::HashMap as GHashMap, msg, prelude::*, ActorId};
 use io::{Post, PostId, Thread, ThreadGraph, ThreadNode, ThreadReply, ThreadStatus, ThreadType};
 
+#[derive(Encode, Decode, TypeInfo)]
+#[codec(crate = gstd::codec)]
+#[scale_info(crate = gstd::scale_info)]
+pub struct QueryThread {
+    pub post_data: Post,
+    pub thread_type: ThreadType,
+    pub thread_status: ThreadStatus,
+}
+
 #[derive(Default)]
 pub struct ThreadStorage {
     pub threads: GHashMap<PostId, Thread>,
@@ -154,15 +163,6 @@ pub enum StorageQueryReply {
     // Fetch all replies and the thread itself for a given thread in a post_data format
     AllRepliesFE(Post, Vec<Post>),
     DistributedTokens(u128),
-}
-
-#[derive(Encode, Decode, TypeInfo)]
-#[codec(crate = gstd::codec)]
-#[scale_info(crate = gstd::scale_info)]
-pub struct QueryThread {
-    pub post_data: Post,
-    pub thread_type: ThreadType,
-    pub thread_status: ThreadStatus,
 }
 
 pub struct ContractMetadata;
