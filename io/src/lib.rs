@@ -1,6 +1,7 @@
 #![no_std]
 
 use gstd::{exec, msg, prelude::*, ActorId};
+use primitive_types::H512;
 
 pub type PostId = u32;
 pub type Timestamp = u64;
@@ -159,4 +160,45 @@ impl Default for ThreadGraph {
     fn default() -> Self {
         Self::new()
     }
+}
+
+// FT
+#[derive(Encode, Debug, Decode, TypeInfo, Copy, Clone)]
+#[codec(crate = gstd::codec)]
+#[scale_info(crate = gstd::scale_info)]
+pub enum LogicAction {
+    Mint {
+        recipient: ActorId,
+        amount: u128,
+    },
+    Burn {
+        sender: ActorId,
+        amount: u128,
+    },
+    Transfer {
+        sender: ActorId,
+        recipient: ActorId,
+        amount: u128,
+    },
+    Approve {
+        approved_account: ActorId,
+        amount: u128,
+    },
+    Permit {
+        owner_account: ActorId,
+        approved_account: ActorId,
+        amount: u128,
+        permit_id: u128,
+        sign: H512,
+    },
+}
+
+#[derive(Debug, Encode, Decode, TypeInfo, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+#[codec(crate = gstd::codec)]
+#[scale_info(crate = gstd::scale_info)]
+pub enum FTokenEvent {
+    Ok,
+    Err,
+    Balance(u128),
+    PermitId(u128),
 }
