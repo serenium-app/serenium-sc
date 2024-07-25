@@ -2,9 +2,9 @@
 
 use gmeta::{InOut, Metadata, Out};
 use gstd::{msg, prelude::*, ActorId};
+use io::{FTokenEvent, LogicAction};
 use io::{InitReply, InitThread, Post, PostId, Thread, ThreadReply};
 use reward_logic_io::{RewardLogicAction, RewardLogicEvent};
-use sharded_fungible_token_io::{FTokenEvent, LogicAction};
 use storage_io::{StorageAction, StorageEvent};
 
 #[derive(Default, Encode, Decode, TypeInfo)]

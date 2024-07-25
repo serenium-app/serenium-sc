@@ -2,8 +2,8 @@
 
 use gmeta::{InOut, Metadata, Out};
 use gstd::{collections::HashMap as GHashMap, msg, prelude::*, ActorId};
+use io::{FTokenEvent, LogicAction};
 use io::{PostId, ThreadGraph, ThreadNode};
-use sharded_fungible_token_io::{FTokenEvent, LogicAction};
 use storage_io::{StorageQuery, StorageQueryReply};
 
 #[derive(Default, Encode, Decode, TypeInfo)]
