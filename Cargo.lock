@@ -359,7 +359,7 @@ dependencies = [
  "cfg-if",
  "libc",
  "miniz_oxide",
- "object 0.36.1",
+ "object 0.36.2",
  "rustc-demangle",
 ]
 
@@ -1745,35 +1745,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "galloc"
-version = "1.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c9f5076d43a53129240a66818481b9878b6ac57ad880e79fd35a3fcef1c45f9"
-dependencies = [
- "gear-dlmalloc",
-]
-
-[[package]]
 name = "gcore"
 version = "1.4.0"
 source = "git+https://github.com/gear-tech/gear?tag=v1.4.0#aaadcdb580e6dcc0913b152bbca2f57c76093059"
 dependencies = [
- "gear-core-errors 1.4.0",
- "gear-stack-buffer 1.4.0",
- "gsys 1.4.0",
- "parity-scale-codec",
-]
-
-[[package]]
-name = "gcore"
-version = "1.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c272adfc55e4a4a8a41aee309f13f5c57a25194bad7c7cc5a0fb37d07f3547e"
-dependencies = [
- "gear-core-errors 1.4.2",
- "gear-stack-buffer 1.4.2",
- "gprimitives",
- "gsys 1.4.2",
+ "gear-core-errors",
+ "gear-stack-buffer",
+ "gsys",
  "parity-scale-codec",
 ]
 
@@ -1789,7 +1767,7 @@ dependencies = [
  "gear-common-codegen",
  "gear-core",
  "gear-wasm-instrument",
- "gsys 1.4.0",
+ "gsys",
  "log",
  "primitive-types",
  "sp-arithmetic",
@@ -1817,9 +1795,9 @@ dependencies = [
  "byteorder",
  "derive_more",
  "enum-iterator 1.5.0",
- "gear-core-errors 1.4.0",
+ "gear-core-errors",
  "gear-wasm-instrument",
- "gsys 1.4.0",
+ "gsys",
  "hashbrown 0.14.5",
  "hex",
  "log",
@@ -1841,12 +1819,12 @@ dependencies = [
  "blake2-rfc",
  "derive_more",
  "gear-core",
- "gear-core-errors 1.4.0",
+ "gear-core-errors",
  "gear-lazy-pages-common",
  "gear-sandbox",
  "gear-sandbox-env",
  "gear-wasm-instrument",
- "gsys 1.4.0",
+ "gsys",
  "log",
  "parity-scale-codec",
 ]
@@ -1863,17 +1841,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gear-core-errors"
-version = "1.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ea454c3f84f392c9c11b90e966d15e2dd037a91dd5abeaf3493f199c91b4012"
-dependencies = [
- "derive_more",
- "enum-iterator 1.5.0",
- "scale-info",
-]
-
-[[package]]
 name = "gear-core-processor"
 version = "1.4.0"
 source = "git+https://github.com/gear-tech/gear?tag=v1.4.0#aaadcdb580e6dcc0913b152bbca2f57c76093059"
@@ -1882,11 +1849,11 @@ dependencies = [
  "derive_more",
  "gear-core",
  "gear-core-backend",
- "gear-core-errors 1.4.0",
+ "gear-core-errors",
  "gear-lazy-pages-common",
  "gear-lazy-pages-interface",
  "gear-wasm-instrument",
- "gsys 1.4.0",
+ "gsys",
  "log",
  "scale-info",
 ]
@@ -2036,26 +2003,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "gear-ss58"
-version = "1.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a54d1199553745126a7a519d64e748b71b1927c2da54bb4758791d5e6131596"
-dependencies = [
- "blake2",
- "bs58",
- "hex",
-]
-
-[[package]]
 name = "gear-stack-buffer"
 version = "1.4.0"
 source = "git+https://github.com/gear-tech/gear?tag=v1.4.0#aaadcdb580e6dcc0913b152bbca2f57c76093059"
-
-[[package]]
-name = "gear-stack-buffer"
-version = "1.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68a0f6dfda464d2293ae6808aee9245a194799db651f888076020c65c30a66ee"
 
 [[package]]
 name = "gear-utils"
@@ -2091,7 +2041,7 @@ dependencies = [
  "gear-core",
  "gear-pwasm-utils",
  "gear-wasm-instrument",
- "gmeta 1.4.0",
+ "gmeta",
  "log",
  "once_cell",
  "pathdiff",
@@ -2204,32 +2154,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gmeta"
-version = "1.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "82d4fbb3700df8abeed1753ca211be90d9ae7eba772dee1b097f2e6c0ac27871"
-dependencies = [
- "blake2",
- "derive_more",
- "hex",
- "scale-info",
-]
-
-[[package]]
-name = "gprimitives"
-version = "1.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be08df9284de8c1947d32da6f752c788f178be46f066386c36a204540cf24eb7"
-dependencies = [
- "derive_more",
- "gear-ss58 1.4.2",
- "hex",
- "parity-scale-codec",
- "primitive-types",
- "scale-info",
-]
-
-[[package]]
 name = "group"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2248,10 +2172,10 @@ dependencies = [
  "arrayvec 0.7.4",
  "const_format",
  "futures",
- "galloc 1.4.0",
- "gcore 1.4.0",
- "gear-core-errors 1.4.0",
- "gstd-codegen 1.4.0",
+ "galloc",
+ "gcore",
+ "gear-core-errors",
+ "gstd-codegen",
  "hashbrown 0.14.5",
  "hex",
  "parity-scale-codec",
@@ -2260,43 +2184,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "gstd"
-version = "1.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c58b77baf767e90f5d11dc42cf1be867ff9a33e6c555b5184505e306b66eb79"
-dependencies = [
- "arrayvec 0.7.4",
- "const_format",
- "futures",
- "galloc 1.4.2",
- "gcore 1.4.2",
- "gear-core-errors 1.4.2",
- "gstd-codegen 1.4.2",
- "hashbrown 0.14.5",
- "hex",
- "parity-scale-codec",
- "scale-info",
-]
-
-[[package]]
 name = "gstd-codegen"
 version = "1.4.0"
 source = "git+https://github.com/gear-tech/gear?tag=v1.4.0#aaadcdb580e6dcc0913b152bbca2f57c76093059"
 dependencies = [
- "gear-ss58 1.4.0",
+ "gear-ss58",
  "hex",
- "proc-macro2",
- "quote",
- "syn 2.0.72",
-]
-
-[[package]]
-name = "gstd-codegen"
-version = "1.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2820ff3e8a5ea3e676374928587723a2b90162200351bac704123a1bb2e692bd"
-dependencies = [
- "gprimitives",
  "proc-macro2",
  "quote",
  "syn 2.0.72",
@@ -2306,12 +2199,6 @@ dependencies = [
 name = "gsys"
 version = "1.4.0"
 source = "git+https://github.com/gear-tech/gear?tag=v1.4.0#aaadcdb580e6dcc0913b152bbca2f57c76093059"
-
-[[package]]
-name = "gsys"
-version = "1.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4cea2fa86657d54507ee30862d8f5249c1f2f7bb3ccd5ce3b19a34982fd7fa42"
 
 [[package]]
 name = "gtest"
@@ -2324,13 +2211,13 @@ dependencies = [
  "env_logger",
  "etc",
  "gear-core",
- "gear-core-errors 1.4.0",
+ "gear-core-errors",
  "gear-core-processor",
  "gear-lazy-pages",
  "gear-lazy-pages-common",
  "gear-utils",
  "gear-wasm-instrument",
- "gsys 1.4.0",
+ "gsys",
  "hex",
  "indexmap 2.2.6",
  "log",
@@ -2601,8 +2488,8 @@ name = "io"
 version = "0.1.0"
 dependencies = [
  "gear-wasm-builder",
- "gmeta 1.4.0",
- "gstd 1.4.0",
+ "gmeta",
+ "gstd",
  "primitive-types",
 ]
 
@@ -2808,8 +2695,8 @@ name = "logic"
 version = "0.1.0"
 dependencies = [
  "gear-wasm-builder",
- "gmeta 1.4.0",
- "gstd 1.4.0",
+ "gmeta",
+ "gstd",
  "gtest",
  "io",
  "logic-io",
@@ -2821,11 +2708,10 @@ name = "logic-io"
 version = "0.1.0"
 dependencies = [
  "gear-wasm-builder",
- "gmeta 1.4.0",
- "gstd 1.4.0",
+ "gmeta",
+ "gstd",
  "io",
  "reward-logic-io",
- "sharded-fungible-token-io",
  "storage-io",
 ]
 
@@ -3177,9 +3063,9 @@ dependencies = [
 
 [[package]]
 name = "object"
-version = "0.36.1"
+version = "0.36.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "081b846d1d56ddfc18fdf1a922e4f6e07a11768ea1b92dec44e42b72712ccfce"
+checksum = "3f203fa8daa7bb185f760ae12bd8e097f63d17041dcdcaf675ac54cdf863170e"
 dependencies = [
  "memchr",
 ]
@@ -3685,8 +3571,8 @@ name = "reward-logic"
 version = "0.1.0"
 dependencies = [
  "gear-wasm-builder",
- "gmeta 1.4.0",
- "gstd 1.4.0",
+ "gmeta",
+ "gstd",
  "gtest",
  "io",
  "reward-logic-io",
@@ -3697,10 +3583,9 @@ name = "reward-logic-io"
 version = "0.1.0"
 dependencies = [
  "gear-wasm-builder",
- "gmeta 1.4.0",
- "gstd 1.4.0",
+ "gmeta",
+ "gstd",
  "io",
- "sharded-fungible-token-io",
  "storage-io",
 ]
 
@@ -4061,16 +3946,6 @@ checksum = "75872d278a8f37ef87fa0ddbda7802605cb18344497949862c0d4dcb291eba60"
 dependencies = [
  "digest 0.10.7",
  "keccak",
-]
-
-[[package]]
-name = "sharded-fungible-token-io"
-version = "1.1.0"
-source = "git+https://github.com/gear-foundation/dapps?tag=v1.1.0#c8f9cf52bbaf1b1a5bd91cdba5f06892c4299f41"
-dependencies = [
- "gmeta 1.4.2",
- "gstd 1.4.2",
- "primitive-types",
 ]
 
 [[package]]
@@ -4615,8 +4490,8 @@ name = "storage"
 version = "0.1.0"
 dependencies = [
  "gear-wasm-builder",
- "gmeta 1.4.0",
- "gstd 1.4.0",
+ "gmeta",
+ "gstd",
  "gtest",
  "io",
  "storage-io",
@@ -4627,8 +4502,8 @@ name = "storage-io"
 version = "0.1.0"
 dependencies = [
  "gear-wasm-builder",
- "gmeta 1.4.0",
- "gstd 1.4.0",
+ "gmeta",
+ "gstd",
  "io",
 ]
 
