@@ -26,6 +26,3 @@ logic-io.path = "logic/io"
 reward-logic-io.path = "reward-logic/io"
 
 tokio = "1"
-
-# External binaries
-sharded-fungible-token-io = { git = "https://github.com/gear-foundation/dapps", tag = "v1.1.0" }
