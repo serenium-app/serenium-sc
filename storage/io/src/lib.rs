@@ -13,6 +13,14 @@ pub struct QueryThread {
     pub thread_status: ThreadStatus,
 }
 
+#[derive(Encode, Decode, TypeInfo)]
+#[codec(crate = gstd::codec)]
+#[scale_info(crate = gstd::scale_info)]
+pub struct QueryReply {
+    pub post_data: Post,
+    pub thread_id: PostId,
+}
+
 #[derive(Default)]
 pub struct ThreadStorage {
     pub threads: GHashMap<PostId, Thread>,
@@ -42,6 +50,7 @@ impl ThreadStorage {
         if let Some(thread) = self.threads.get_mut(&thread_id) {
             // Push to graph_rep
             let new_node: ThreadNode = (reply.post_data.post_id, reply.post_data.owner);
+
             thread.graph_rep.add_edge(ref_node, new_node);
 
             thread.replies.push((reply.post_data.post_id, reply));
@@ -166,7 +175,7 @@ pub enum StorageQueryReply {
     // Fetch all threads with the title, content, owner and a single reply
     AllThreadsFE(Vec<(QueryThread, Option<Post>)>),
     // Fetch all replies and the thread itself for a given thread in a post_data format
-    AllRepliesFE(Post, Vec<Post>),
+    AllRepliesFE(QueryThread, Vec<QueryReply>),
     DistributedTokens(u128),
 }
 

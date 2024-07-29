@@ -108,6 +108,7 @@ pub struct ThreadReply {
     pub likes: u128,
     pub reports: u64,
     pub like_history: Vec<(ActorId, u128)>,
+    pub thread_id: PostId,
 }
 
 #[derive(Encode, Decode, TypeInfo, Clone)]
