@@ -1,7 +1,7 @@
 #![no_std]
 
 use gmeta::{InOut, Metadata, Out};
-use gstd::{msg, prelude::*, ActorId};
+use gstd::{exec, msg, prelude::*, ActorId};
 use io::{FTokenEvent, LogicAction};
 use io::{InitReply, InitThread, Post, PostId, Thread, ThreadReply};
 use reward_logic_io::{RewardLogicAction, RewardLogicEvent};
@@ -96,16 +96,25 @@ impl ThreadLogic {
             replies: Default::default(),
         };
 
-        self.mint_tokens(1).await.expect("");
+        self.mint_tokens(1).await.expect("Failed to mint token");
+
+        // Send delayed message to expire thread after 60 blocks or 3 minutes
+        msg::send_delayed(
+            exec::program_id(),
+            ThreadLogicAction::ExpireThread(thread.post_data.post_id),
+            0,
+            60,
+        )
+        .expect("Failed to send PushThread message to Storage contract");
 
         let res = msg::send_for_reply_as::<_, StorageEvent>(
             self.address_storage
-                .expect("Failed to get storage contract address"),
+                .expect("Failed to get Storage contract address"),
             StorageAction::PushThread(thread),
             0,
             0,
         )
-        .expect("Failed to send PushThread message to Storage contract")
+        .expect("Failed to send Expire message to Storage contract")
         .await;
 
         match res {
@@ -190,12 +199,13 @@ impl ThreadLogic {
 
     pub async fn send_trigger_reward_msg(&mut self, thread_id: PostId) -> Result<(), ()> {
         let reward_res = msg::send_for_reply_as::<_, RewardLogicEvent>(
-            self.address_reward_logic.expect(""),
+            self.address_reward_logic
+                .expect("Failed to get RewardLogic contract address"),
             RewardLogicAction::TriggerRewardLogic(thread_id),
             0,
             0,
         )
-        .expect("")
+        .expect("Failed to send TriggerRewardLogic message to Reward Logic contract")
         .await;
 
         match reward_res {
@@ -209,7 +219,8 @@ impl ThreadLogic {
 
     pub async fn send_thread_status_expired_msg(&mut self, thread_id: PostId) -> Result<(), ()> {
         let res = msg::send_for_reply_as::<_, StorageEvent>(
-            self.address_storage.expect(""),
+            self.address_storage
+                .expect("Failed to get Storage contract address"),
             StorageAction::ChangeStatusState(thread_id),
             0,
             0,
@@ -227,12 +238,12 @@ impl ThreadLogic {
     }
 
     pub async fn expire_thread(&mut self, thread_id: PostId) {
-        self.send_trigger_reward_msg(thread_id).await.unwrap();
+        // self.send_trigger_reward_msg(thread_id).await.expect("Failed to send trigger reward msg");
 
         // Only when reward logic has been successful, change state
         self.send_thread_status_expired_msg(thread_id)
             .await
-            .unwrap();
+            .expect("Failed to send ChangeStatusState message to Storage Contract");
     }
 }
 
