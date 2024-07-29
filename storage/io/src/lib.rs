@@ -29,7 +29,12 @@ impl ThreadStorage {
         }
     }
 
-    pub fn push_thread(&mut self, thread: Thread) {
+    pub fn push_thread(&mut self, mut thread: Thread) {
+        // Create a new node on graph
+        let new_node: ThreadNode = (thread.post_data.post_id, thread.post_data.owner);
+
+        thread.graph_rep.add_node(new_node);
+
         self.threads.insert(thread.post_data.post_id, thread);
     }
 

@@ -29,15 +29,17 @@ impl ThreadLogic {
 
     pub async fn mint_tokens(&mut self, amount: u128) -> Result<(), ()> {
         let res = msg::send_for_reply_as::<_, FTokenEvent>(
-            self.address_ft.expect(""),
+            self.address_ft.expect("Failed to get FT contract address"),
             LogicAction::Mint {
-                recipient: self.address_storage.unwrap(),
+                recipient: self
+                    .address_storage
+                    .expect("Failed to get Storage contract address"),
                 amount,
             },
             0,
             0,
         )
-        .expect("")
+        .expect("Failed to send mint message")
         .await;
 
         match res {
@@ -97,12 +99,13 @@ impl ThreadLogic {
         self.mint_tokens(1).await.expect("");
 
         let res = msg::send_for_reply_as::<_, StorageEvent>(
-            self.address_storage.expect(""),
+            self.address_storage
+                .expect("Failed to get storage contract address"),
             StorageAction::PushThread(thread),
             0,
             0,
         )
-        .expect("")
+        .expect("Failed to send PushThread message to Storage contract")
         .await;
 
         match res {
@@ -116,7 +119,7 @@ impl ThreadLogic {
         };
     }
 
-    pub async fn add_reply(&mut self, init_reply: InitReply, ref_node: PostId) {
+    pub async fn add_reply(&mut self, thread_id: PostId, init_reply: InitReply, ref_node: PostId) {
         let post = Post::new(init_reply.title, init_reply.content, init_reply.photo_url);
 
         let reply = ThreadReply {
@@ -127,28 +130,29 @@ impl ThreadLogic {
         };
 
         self.transfer_tokens(
-            self.address_ft.unwrap(),
+            self.address_ft.expect("Address of FT contract not found"),
             1,
             msg::source(),
-            self.address_storage.unwrap(),
+            self.address_storage
+                .expect("Address of Storage contract not found"),
         )
         .await
-        .expect("");
+        .expect("Reply token transfer failed");
 
         let res = msg::send_for_reply_as::<_, StorageEvent>(
-            self.address_storage.expect(""),
-            StorageAction::PushReply(reply.post_data.post_id, reply, ref_node),
+            self.address_storage
+                .expect("Failed to get Storage contract address"),
+            StorageAction::PushReply(thread_id, reply, ref_node),
             0,
             0,
         )
-        .expect("")
+        .expect("Message to Storage contract failed")
         .await;
 
         match res {
             Ok(event) => match event {
-                StorageEvent::ReplyPush(_) => {
-                    msg::reply(ThreadLogicEvent::ReplyAdded, 0).expect("")
-                }
+                StorageEvent::ReplyPush(_) => msg::reply(ThreadLogicEvent::ReplyAdded, 0)
+                    .expect("Reply was not correctly added"),
                 _ => msg::reply(ThreadLogicEvent::LogicError, 0).expect(""),
             },
             Err(_) => msg::reply(ThreadLogicEvent::LogicError, 0).expect(""),
@@ -239,7 +243,7 @@ pub enum ThreadLogicAction {
     AddAddressStorage(ActorId),
     AddAddressRewardLogic(ActorId),
     NewThread(InitThread),
-    AddReply(InitReply, PostId),
+    AddReply(PostId, InitReply, PostId),
     LikeReply(PostId, PostId, u128),
     ExpireThread(PostId),
 }

@@ -135,14 +135,14 @@ extern fn state() {
             let thread_fe: Post = thread_storage
                 .threads
                 .get(&thread_id)
-                .expect("")
+                .expect("Failed to get thread")
                 .post_data
                 .clone();
 
             let replies_fe: Vec<Post> = thread_storage
                 .threads
                 .get(&thread_id)
-                .expect("")
+                .expect("Failed to get thread")
                 .replies
                 .iter()
                 .map(|(_post_id, thread_reply)| thread_reply.post_data.clone())
@@ -154,7 +154,7 @@ extern fn state() {
             let distributed_tokens: u128 = thread_storage
                 .threads
                 .get(&thread_id)
-                .expect("")
+                .expect("Failed to get thread")
                 .distributed_tokens;
 
             StorageQueryReply::DistributedTokens(distributed_tokens)
