@@ -127,6 +127,7 @@ impl ThreadLogic {
             reports: 0,
             like_history: Default::default(),
             likes: 0,
+            thread_id,
         };
 
         self.transfer_tokens(

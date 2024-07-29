@@ -1,9 +1,10 @@
 #![no_std]
 
 use gstd::{msg, prelude::*, ActorId};
-use io::{Post, PostId};
+use io::{Post, PostId, Thread};
 use storage_io::{
-    QueryThread, StorageAction, StorageEvent, StorageQuery, StorageQueryReply, ThreadStorage,
+    QueryReply, QueryThread, StorageAction, StorageEvent, StorageQuery, StorageQueryReply,
+    ThreadStorage,
 };
 
 static mut THREAD_STORAGE: Option<ThreadStorage> = None;
@@ -132,23 +133,30 @@ extern fn state() {
             StorageQueryReply::AllThreadsFE(threads_fe)
         }
         StorageQuery::AllRepliesFE(thread_id) => {
-            let thread_fe: Post = thread_storage
+            let thread: &Thread = thread_storage
                 .threads
                 .get(&thread_id)
-                .expect("Failed to get thread")
-                .post_data
-                .clone();
+                .expect("Failed to get thread");
 
-            let replies_fe: Vec<Post> = thread_storage
+            let query_thread: QueryThread = QueryThread {
+                post_data: thread.post_data.clone(),
+                thread_type: thread.thread_type.clone(),
+                thread_status: thread.thread_status.clone(),
+            };
+
+            let replies_fe: Vec<QueryReply> = thread_storage
                 .threads
                 .get(&thread_id)
                 .expect("Failed to get thread")
                 .replies
                 .iter()
-                .map(|(_post_id, thread_reply)| thread_reply.post_data.clone())
+                .map(|(_post_id, thread_reply)| QueryReply {
+                    post_data: thread_reply.post_data.clone(),
+                    thread_id: thread_reply.thread_id,
+                })
                 .collect();
 
-            StorageQueryReply::AllRepliesFE(thread_fe, replies_fe)
+            StorageQueryReply::AllRepliesFE(query_thread, replies_fe)
         }
         StorageQuery::DistributedTokens(thread_id) => {
             let distributed_tokens: u128 = thread_storage
